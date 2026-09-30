@@ -82,7 +82,7 @@
     bubble('ai',msg,{noTools:true});}
   var COPY={not_granted:'The tutor needs your permission to use Claude, and it was declined for this visit. Reload the page to be asked again.',
     sampling_disabled:'Claude isn’t available for this account, so the tutor can’t answer here.',
-    rate_limited:'That’s a lot of questions at once, or you’ve reached your Claude usage limit. Wait a little and try again.',
+    rate_limited:'That’s a lot of questions at once, or today’s free limit has been reached. Wait a minute and try again.',
     session_expired:'You’ve been signed out of Claude. Sign in again, then ask again.',
     refused:'Claude wouldn’t answer that one. Try asking it a different way.',
     empty_completion:'Claude didn’t give an answer. Try asking a shorter or simpler question.',
@@ -127,7 +127,7 @@
     }catch(e){var code=e&&e.code||'upstream_error';
       if(code==='cancelled'){if(e.text){body.innerHTML=md(e.text);turns.push({role:'assistant',content:e.text});persist();}else{body.parentNode.remove();turns.pop();persist();}}
       else if(code==='passcode'){body.parentNode.remove();turns.pop();persist();setCode('');lastQ=q;askCode('That passcode didn’t work. Enter the tutor passcode to carry on.');}
-      else if(code==='not_configured'||code==='bad_key'){unavailable('<p>'+(code==='bad_key'?'The tutor’s API key was refused. The site owner needs to check <b>ANTHROPIC_API_KEY</b> in Netlify, and that the Anthropic account has credit.':'The tutor isn’t set up yet. The site owner needs to add <b>ANTHROPIC_API_KEY</b> in Netlify.')+'</p>');turns.pop();persist();}
+      else if(code==='not_configured'||code==='bad_key'){unavailable('<p>'+(code==='bad_key'?'The tutor’s API key was refused. The site owner needs to check the key in Netlify’s environment variables (<b>GEMINI_API_KEY</b> or ANTHROPIC_API_KEY).':'The tutor isn’t set up yet. The site owner needs to add a free <b>GEMINI_API_KEY</b> in Netlify.')+'</p>');turns.pop();persist();}
       else if(/^(not_granted|sampling_disabled|not_declared|capability_disabled|capability_removed)$/.test(code)){unavailable('<p>'+(COPY[code]||COPY.sampling_disabled)+'</p>');turns.pop();persist();}
       else{if(e.text&&code!=='refused'){body.innerHTML=md(e.text);}else body.innerHTML='';var p=document.createElement('p');p.className='ch-err';p.textContent=COPY[code]||COPY.upstream_error;body.append(p);turns.pop();persist();}
     }finally{busy=false;setBusy(false);ctl=null;inp.focus();}
@@ -192,7 +192,7 @@
   if(window.claude&&typeof window.claude.use==='function'){
     window.claude.use('sample').then(function(s){if(s)connected(s,'claude');else tryServer();}).catch(tryServer);
   }else tryServer();
-  function offMsg(){if(notSetUp)return '<p>The tutor is almost ready. The site owner needs to add an <b>ANTHROPIC_API_KEY</b> in Netlify’s environment variables, then redeploy.</p>';
+  function offMsg(){if(notSetUp)return '<p>The tutor is almost ready. The site owner needs to add a free <b>GEMINI_API_KEY</b> (or an ANTHROPIC_API_KEY) in Netlify’s environment variables, then redeploy.</p>';
     return '<p>The tutor isn’t switched on for this copy of the site.</p><p>It works when you open Goldman Snacks <b>inside Claude</b> (the claude.ai link), or on a copy deployed to Netlify from GitHub with the tutor set up.</p>';}
   /* passcode screen */
   function askCode(msg){log.innerHTML='';sug.innerHTML='';form.hidden=true;
