@@ -187,4 +187,33 @@
     settings:openPanel,
     voice:voice,best:english
   };
+  /* ---------- the tutor's voice: Gemini's natural speech, with this device's voice as the backup ---------- */
+  (function(){
+    var api=window.GSTTS,local={talk:api.talk,hush:api.hush,talking:api.talking};
+    var on=/^https?:$/.test(location.protocol)&&!(window.claude&&window.claude.use),down=false;
+    var cg=0,buf='',bufT=null,chain=Promise.resolve(),pend=0,cur=null,idleCb=null;
+    if(on)fetch('/api/voice',{headers:{accept:'application/json'}}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(!j||!j.ok)on=false;}).catch(function(){on=false;});
+    function code(){try{return localStorage.getItem('gs-tutor-code')||'';}catch(e){return '';}}
+    function get(text){return fetch('/api/voice',{method:'POST',headers:{'content-type':'application/json','x-tutor-code':code()},body:JSON.stringify({text:text})})
+      .then(function(r){if(!r.ok){if(r.status===429||r.status===401||r.status===503)down=true;return null;}return r.blob();}).catch(function(){return null;});}
+    function play(blob,my){return new Promise(function(res){if(my!==cg)return res();var url=URL.createObjectURL(blob),a=new Audio(url);cur=a;
+      a.onended=a.onerror=function(){URL.revokeObjectURL(url);if(cur===a)cur=null;res();};a.play().catch(function(){cur=null;res(false);});});}
+    function flush(){clearTimeout(bufT);bufT=null;var t=buf.trim();buf='';if(!t)return;var my=cg;pend++;
+      var p=get(t);   /* start making the audio straight away, while earlier pieces are still playing */
+      chain=chain.then(function(){return p;}).then(function(blob){if(my!==cg)return;
+        if(blob)return play(blob,my).then(function(ok){if(ok===false&&my===cg)return new Promise(function(res){local.talk(t,res);});});
+        return new Promise(function(res){local.talk(t,res);});   /* free allowance used up: use this device's voice */
+      }).then(function(){if(my!==cg)return;pend--;if(pend<=0&&!buf){pend=0;var cb=idleCb;idleCb=null;cb&&cb();}});}
+    api.talk=function(text,onIdle){
+      if(!on||down)return local.talk(text,onIdle);
+      var t=speakable(String(text||'').replace(/\*\*|__|`|^#+\s*/gm,'').replace(/^\s*[-*•]\s+/gm,'').replace(/^\s*\d+[.)]\s+/gm,''));
+      if(!t||!/[A-Za-z0-9]/.test(t))return;
+      idleCb=onIdle||idleCb;var fresh=pend===0&&!buf;buf+=(buf?' ':'')+t;
+      /* the first sentence goes at once so speech starts quickly; the rest is gathered into bigger pieces to save the free allowance */
+      if(fresh||buf.length>600)flush();else{clearTimeout(bufT);bufT=setTimeout(flush,700);}};
+    api.hush=function(){cg++;clearTimeout(bufT);bufT=null;buf='';pend=0;idleCb=null;chain=Promise.resolve();if(cur){try{cur.pause();}catch(e){}cur=null;}local.hush();};
+    api.talking=function(){return pend>0||!!buf||local.talking();};
+    api.cloud=function(){return on&&!down;};
+  })();
+
 })();
