@@ -209,8 +209,8 @@
       var t=speakable(String(text||'').replace(/\*\*|__|`|^#+\s*/gm,'').replace(/^\s*[-*•]\s+/gm,'').replace(/^\s*\d+[.)]\s+/gm,''));
       if(!t||!/[A-Za-z0-9]/.test(t))return;
       idleCb=onIdle||idleCb;var fresh=pend===0&&!buf;buf+=(buf?' ':'')+t;
-      /* the first sentence goes at once so speech starts quickly; the rest is gathered into bigger pieces to save the free allowance */
-      if(fresh||buf.length>600)flush();else{clearTimeout(bufT);bufT=setTimeout(flush,700);}};
+      /* each sentence's audio is made straight away, all at once, so the next one is ready before the current one ends */
+      if(fresh||buf.length>=80)flush();else{clearTimeout(bufT);bufT=setTimeout(flush,300);}};
     api.hush=function(){cg++;clearTimeout(bufT);bufT=null;buf='';pend=0;idleCb=null;chain=Promise.resolve();if(cur){try{cur.pause();}catch(e){}cur=null;}local.hush();};
     api.talking=function(){return pend>0||!!buf||local.talking();};
     api.cloud=function(){return on&&!down;};
