@@ -740,3 +740,66 @@
       var dv=document.createElement('div');dv.className='vid playing';dv.innerHTML=a.innerHTML;var th=dv.querySelector('.vid-th');th.innerHTML='';th.append(f);a.replaceWith(dv);});});
   });
 })();
+
+/* ---------- Cost model vs revaluation model: a value-over-time diagram (IAS 16 and IAS 38) ---------- */
+(function(){
+  var page=location.pathname.split('/').pop();
+  var AT={'ias-16-property-plant-equipment.html':'The revaluation model','ias-38-intangible-assets.html':'After it is included'};
+  if(!AT[page])return;
+  var MV=[100,150,80,110];   /* what the asset is actually worth at each point */
+  var S={model:'cost',rule:'ifrs',step:0};
+  function carrying(){var c=[100];
+    if(S.model==='reval'&&S.rule==='ifrs'){c.push(150,80,110);}
+    else{c.push(100,80,S.rule==='ifrs'?100:80);}
+    return c;}
+  function story(){var r=S.model==='reval'&&S.rule==='ifrs',st=S.step,k=S.rule;
+    if(S.model==='reval'&&k!=='ifrs'&&st>0)return {t:k==='us'?'US GAAP doesn’t allow the revaluation model at all.':'Goodwill can never be revalued.',d:'So this asset can only use the cost model. Switch to “Cost model” to follow it.',fx:[]};
+    if(st===0)return {t:'Buy the asset for £100.',d:'It goes on the balance sheet at cost: £100. The flat line is the cost.',fx:[]};
+    if(st===1)return r?{t:'Its value rises to £150.',d:'Revaluation model: the asset goes up to £150. The £50 gain goes to OCI and builds up a revaluation surplus in equity.',fx:[['OCI','+50']]}
+      :{t:'Its value rises to £150.',d:'Cost model: ignore the increase. The asset stays at £100. Why? Under the cost model you chose to measure it at what you actually paid, which is reliable and can be checked. The £50 is an unrealised gain: you haven’t sold it, and the value could change again. Prudence: don’t count gains you haven’t made yet. (Falls below cost are different: an asset must never be shown at more than it’s worth, so losses are recognised.)',fx:[['Ignored','50']]};
+    if(st===2)return r?{t:'Its value falls to £80.',d:'A £70 fall. First use up the £50 revaluation surplus (through OCI). Only the £20 that takes it below cost is an impairment loss in P/L.',fx:[['OCI','−50'],['P/L','−20']]}
+      :{t:'Its value falls to £80.',d:'Below cost, so it is impaired. Write it down to £80. The £20 impairment loss goes to P/L.',fx:[['P/L','−20']]};
+    if(k==='us')return {t:'Its value recovers to £110.',d:'US GAAP: an impairment can never be reversed. The asset stays at £80 even though it is worth more.',fx:[['No reversal','']]};
+    if(k==='gw')return {t:'Its value recovers to £110.',d:'Goodwill (IAS 36): an impairment of goodwill is never reversed, under IFRS or US GAAP. It stays at £80.',fx:[['No reversal','']]};
+    return r?{t:'Its value recovers to £110.',d:'IFRS: first reverse the £20 loss that went to P/L, so £20 back to P/L. The other £10 above cost goes to OCI as a new surplus. Asset at £110.',fx:[['P/L','+20'],['OCI','+10']]}
+      :{t:'Its value recovers to £110.',d:'IFRS (IAS 36): reverse the impairment, but only back up to cost: £20 back to P/L. The extra £10 above cost is ignored. Asset at £100.',fx:[['P/L','+20'],['Ignored','10']]};}
+  function bs(){var c=carrying()[S.step],rs=0;if(S.model==='reval'&&S.rule==='ifrs'){rs=[0,50,0,10][S.step];}return {c:c,rs:rs};}
+  var W=560,H=250,X0=50,X1=W-60,Y=function(v){return 210-(v-60)*1.6;},XS=function(i){return X0+i*(X1-X0)/3;};
+  function path(vals,n){var d='';for(var i=0;i<=n;i++){var x=XS(i),y=Y(vals[i]);if(i===0)d='M'+x+' '+y;else{var px=XS(i-1),py=Y(vals[i-1]),mx=(px+x)/2;d+=' C'+mx+' '+py+','+mx+' '+y+','+x+' '+y;}}return d;}
+  function draw(){var c=carrying(),n=S.step,s=story(),b=bs();
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+s.t+' '+s.d+'">'+
+      '<line class="vc-axis" x1="'+X0+'" y1="10" x2="'+X0+'" y2="'+(H-25)+'"/><line class="vc-axis" x1="'+X0+'" y1="'+(H-25)+'" x2="'+X1+'" y2="'+(H-25)+'"/>'+
+      '<text class="vc-lab" x="8" y="18">£</text><text class="vc-lab" x="'+(X1-30)+'" y="'+(H-8)+'">time</text>'+
+      '<rect class="vc-up" x="'+X0+'" y="10" width="'+(X1-X0)+'" height="'+(Y(100)-10)+'"/><rect class="vc-down" x="'+X0+'" y="'+Y(100)+'" width="'+(X1-X0)+'" height="'+(H-25-Y(100))+'"/>'+
+      '<text class="vc-zone" x="'+(X1-6)+'" y="26" text-anchor="end">above cost: OCI (revaluation model only)</text><text class="vc-zone" x="'+(X1-6)+'" y="'+(H-32)+'" text-anchor="end">below cost: impairment, P/L</text>'+
+      '<line class="vc-cost" x1="'+X0+'" y1="'+Y(100)+'" x2="'+X1+'" y2="'+Y(100)+'"/><text class="vc-cl" x="'+(X1+6)+'" y="'+(Y(100)+4)+'">Cost</text>'+
+      '<path class="vc-mv" d="'+path(MV,n)+'"/>'+
+      '<path class="vc-ca" d="'+path(c,n)+'"/>';
+    for(var i=0;i<=n;i++){svg+='<circle class="vc-dot" cx="'+XS(i)+'" cy="'+Y(c[i])+'" r="5"/><text class="vc-v" x="'+XS(i)+'" y="'+(Y(c[i])+(c[i]>=100?-10:20))+'" text-anchor="middle">'+c[i]+'</text>';
+      if(MV[i]!==c[i])svg+='<circle class="vc-mvd" cx="'+XS(i)+'" cy="'+Y(MV[i])+'" r="4"/><text class="vc-mvv" x="'+XS(i)+'" y="'+(Y(MV[i])+(MV[i]>=100?-9:18))+'" text-anchor="middle">worth '+MV[i]+'</text>';}
+    svg+='</svg>';
+    root.querySelector('.vc-chart').innerHTML=svg;
+    root.querySelector('.vc-t').textContent=s.t;root.querySelector('.vc-d').textContent=s.d;
+    root.querySelector('.vc-fx').innerHTML=s.fx.map(function(f){var cls=/OCI/.test(f[0])?'oci':/P\/L/.test(f[0])?'pl':'nil';return '<span class="vc-chip '+cls+'"><b>'+f[0]+'</b> '+f[1]+'</span>';}).join('');
+    root.querySelector('.vc-bs').innerHTML='<div class="vc-bh">Balance sheet</div><div><span>'+(page.indexOf('38')>0?'Intangible asset':'Land')+'</span><b>'+b.c+'</b></div><div><span>Revaluation surplus</span><b>'+b.rs+'</b></div>';
+    root.querySelector('.vc-prev').disabled=n===0;root.querySelector('.vc-next').disabled=n===3;
+    root.querySelector('.vc-n').textContent='Step '+(n+1)+' of 4';
+    root.querySelectorAll('[data-m]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.m===S.model?'true':'false');});
+    root.querySelectorAll('[data-r]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.r===S.rule?'true':'false');});
+    var p=root.querySelector('.vc-ca');if(p&&!matchMedia('(prefers-reduced-motion: reduce)').matches){var L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;p.getBoundingClientRect();p.style.transition='stroke-dashoffset .9s ease';p.style.strokeDashoffset=0;}}
+  var root=document.createElement('figure');root.className='vc';
+  root.innerHTML='<figcaption class="vc-cap"><b>Cost model vs revaluation model</b><span>The same asset over time. Pick a model and step through.</span></figcaption>'+
+    '<div class="vc-ctl"><div class="vc-seg" role="group" aria-label="Model"><button type="button" data-m="cost">Cost model</button><button type="button" data-m="reval">Revaluation model</button></div>'+
+    '<div class="vc-seg" role="group" aria-label="Rules"><button type="button" data-r="ifrs">IFRS</button><button type="button" data-r="us">US GAAP</button><button type="button" data-r="gw">Goodwill</button></div></div>'+
+    '<div class="vc-body"><div class="vc-chart"></div><div class="vc-bs"></div></div>'+
+    '<div class="vc-key"><span><i class="k-ca"></i>In the accounts</span><span><i class="k-mv"></i>What it’s actually worth</span></div>'+
+    '<div class="vc-say" aria-live="polite"><p class="vc-t"></p><p class="vc-d"></p><div class="vc-fx"></div></div>'+
+    '<div class="vc-nav"><button type="button" class="btn vc-prev">Back</button><span class="vc-n"></span><button type="button" class="btn vc-next">Next</button></div>';
+  root.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+    if(b.dataset.m){S.model=b.dataset.m;}else if(b.dataset.r){S.rule=b.dataset.r;}else if(b.classList.contains('vc-next')){S.step=Math.min(3,S.step+1);}else if(b.classList.contains('vc-prev')){S.step=Math.max(0,S.step-1);}else return;draw();});
+  function place(){var learn=document.querySelector('#learn .prose')||document.querySelector('#learn');if(!learn)return;
+    var h=[].slice.call(learn.querySelectorAll('h3')).find(function(x){return x.textContent.trim()===AT[page];});
+    var after=null;if(h){var el=h.nextElementSibling;while(el&&el.tagName!=='H3')el=el.nextElementSibling;after=el;}
+    if(after)learn.insertBefore(root,after);else learn.append(root);draw();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',place);else place();
+})();
