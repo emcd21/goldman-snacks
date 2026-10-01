@@ -74,18 +74,25 @@ async function claude(key, system, messages, signal) {
 }
 
 /* ---------- Gemini (Google) ---------- */
-async function gemini(key, system, messages, signal) {
-  const list = env("TUTOR_MODEL") ? [env("TUTOR_MODEL")] : GEMINI_MODELS;
-  const body = JSON.stringify({
+// Voice mode wants the first words fast, so it tries the quick "lite" models first.
+const FAST_MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+async function gemini(key, system, messages, signal, fast) {
+  const list = env("TUTOR_MODEL") ? [env("TUTOR_MODEL")] : fast ? FAST_MODELS : GEMINI_MODELS;
+  const make = (think) => JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },
     contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
-    generationConfig: { maxOutputTokens: 4096, temperature: 0.4 },
+    // Less "thinking" before answering = the answer starts sooner.
+    generationConfig: { maxOutputTokens: 4096, temperature: 0.4, ...(think ? { thinkingConfig: think } : {}) },
   });
   let last = 0;
   for (const model of list) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
-      method: "POST", headers: { "x-goog-api-key": key, "content-type": "application/json" }, body, signal,
+    const think = /gemini-3/.test(model) ? { thinkingLevel: "low" } : /2\.5-flash/.test(model) ? { thinkingBudget: 0 } : null;
+    const go = (b) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
+      method: "POST", headers: { "x-goog-api-key": key, "content-type": "application/json" }, body: b, signal,
     });
+    let r = await go(make(think));
+    // If this model doesn't accept the thinking setting, ask again without it.
+    if (r.status === 400 && think) { try { await r.body?.cancel(); } catch {} r = await go(make(null)); }
     if (r.ok && r.body) {
       return {
         stream: textStream(async (emit) => {
@@ -139,7 +146,7 @@ export default async (req) => {
   if (!merged.length || merged[merged.length - 1].role !== "user") return json(400, { error: "no_question" });
 
   let out;
-  try { out = gkey ? await gemini(gkey, system, merged, req.signal) : await claude(akey, system, merged, req.signal); }
+  try { out = gkey ? await gemini(gkey, system, merged, req.signal, !!body?.fast) : await claude(akey, system, merged, req.signal); }
   catch { return json(502, { error: "upstream" }); }
   if (out.fail) {
     const s = out.fail;
