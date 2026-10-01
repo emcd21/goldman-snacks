@@ -18,9 +18,9 @@
   function pageText(){var parts=[],secs=document.querySelectorAll('#basics,#learn,#example');
     if(secs.length)secs.forEach(function(s){parts.push(textOf(s));});
     else{var m=document.querySelector('main .article')||document.querySelector('main');if(m)parts.push(textOf(m));}
-    return parts.join('\n\n').slice(0,14000);}
+    return parts.join('\n\n').slice(0,7000);}
   var RULES=function(){return 'You are the tutor on Goldman Snacks, a revision website for a UK university accounting student in Year 3 of an International Financial Reporting module (ACCA-style content, IFRS). '+
-    'Explain things the way a friendly teacher would talk a student through them: warm, conversational, one idea at a time. Your answer may be read aloud, so it should sound natural spoken.\nThe student may have dyslexia or ADHD, so:\n- Keep answers short and focused: 1 to 4 short paragraphs or a short list. Offer to go deeper rather than writing everything.\n- Use plain English, short sentences, and bold the key terms.\n- Use a small worked example with round numbers when it helps. Lay out journals and workings as simple tables (| Account | Dr £ | Cr £ |).\n- Use UK and IFRS terms (receivables, payables, inventory, statement of financial position, profit or loss), £ and UK spelling.\n- Check your arithmetic. If a rule has exceptions, say so briefly. If you are not sure, say so.\n- For practice questions, help the student get there: give a hint or the first step first, unless they ask for the full answer.\n- Stay on accounting, finance, study skills and this website. Politely steer back if asked about something unrelated.\n\n'+
+    'Explain things the way a friendly teacher would talk a student through them: warm, conversational, one idea at a time. Your answer may be read aloud, so it should sound natural spoken.\nThe student may have dyslexia or ADHD, so:\n- Match the length to the question. A quick yes/no or fact: one or two sentences. A normal "what is" or "how does" question: a short paragraph with a small example. A big or tricky question (a full exam question, a multi-step method): go step by step, cover the first part, then check in ("Make sense so far?") instead of writing everything at once. Never pad.\n- Use plain English, short sentences, and bold the key terms.\n- Use a small worked example with round numbers when it helps. Lay out journals and workings as simple tables (| Account | Dr £ | Cr £ |).\n- Use UK and IFRS terms (receivables, payables, inventory, statement of financial position, profit or loss), £ and UK spelling.\n- Check your arithmetic. If a rule has exceptions, say so briefly. If you are not sure, say so.\n- For practice questions, help the student get there: give a hint or the first step first, unless they ask for the full answer.\n- Stay on accounting, finance, study skills and this website. Politely steer back if asked about something unrelated.\n\n'+
     'The student is on this page: "'+pageTitle()+'" ('+here+'). Here is the page content, which may be used to ground your answer:\n<page>\n'+pageText()+'\n</page>';};
 
   /* ---------- a tiny, safe Markdown renderer ---------- */
@@ -168,7 +168,7 @@
   function setCode(c){try{if(c)localStorage.setItem('gs-tutor-code',c);else localStorage.removeItem('gs-tutor-code');}catch(e){}}
   async function serverSample(input,o){o=o||{};var signal=o.signal,onText=o.onText;
     var system=input[0].content,messages=input.slice(1),res;
-    try{res=await fetch('/api/tutor',{method:'POST',headers:{'content-type':'application/json','x-tutor-code':getCode()},body:JSON.stringify({system:system,messages:messages}),signal:signal});}
+    try{res=await fetch('/api/tutor',{method:'POST',headers:{'content-type':'application/json','x-tutor-code':getCode()},body:JSON.stringify({system:system,messages:messages,fast:!!o.fast}),signal:signal});}
     catch(e){throw {code:signal&&signal.aborted?'cancelled':'upstream_error'};}
     if(!res.ok){var j={};try{j=await res.json();}catch(e){}
       if(res.status===401)throw {code:'passcode'};if(res.status===429)throw {code:'rate_limited'};
@@ -201,5 +201,83 @@
     b.append(f);var ci=f.querySelector('input');setTimeout(function(){ci.focus();},30);
     f.onsubmit=function(e){e.preventDefault();var v=ci.value.trim();if(!v)return;setCode(v);form.hidden=false;redraw();var q=lastQ||pendingQ;lastQ='';pendingQ=null;if(q)ask(q);else inp.focus();};}
   var _open=open;open=function(q){_open(q);if(ready&&!sample)unavailable(offMsg());else if(ready&&mode==='server'&&needsCode&&!getCode()){if(q)lastQ=q;askCode();}};
-  window.GSChat={open:function(q){open(q);}};
+  /* ---------- Voice mode: a hands-free spoken conversation, like a phone call with a teacher ---------- */
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var VOICE_RULES='\n\nVOICE CONVERSATION MODE. The student is talking to you out loud, and your reply is read out by a voice, so talk like a friendly teacher in a real conversation. '+
+    'Plain spoken sentences only: no markdown, no tables, no bullet points, no headings, no symbols or emojis. Say amounts naturally ("twelve thousand pounds", "nine over twelve"). '+
+    'Match the length to the question: a quick question gets one or two sentences; a normal question gets about four to six sentences with a tiny example; a big or multi-step question gets the first step or two, then ask "Does that make sense so far?" and carry on when they say yes. '+
+    'If they say "shorter", "go deeper" or "give me an example", do that. Speech recognition can mishear accounting words (for example "I as" for IAS, "a cruel" for accrual), so read what they meant.';
+  var vm=null,vst='off',rec=null,recOn=false,used=0,heard='',vctl=null,vmuted=false,silT=null,vAns='',vDone=true,vq='';
+  var MIC='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path class="off" d="M4 4l16 16"/></svg>',
+    TXT='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 10h14M5 14h9M5 18h6"/></svg>',
+    HP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>';
+  var WORDS={listening:'Listening…',thinking:'Thinking…',speaking:'Speaking… start talking to interrupt',muted:'Mic is off. Tap the mic to talk.',start:'Starting…'};
+  function vset(st,msg){vst=st;if(!vm)return;vm.dataset.st=st;vm.querySelector('.vm-status').textContent=msg||WORDS[st]||'';}
+  function vbuild(){if(vm)return;vm=document.createElement('div');vm.className='vm';vm.hidden=true;vm.setAttribute('role','dialog');vm.setAttribute('aria-label','Voice conversation with the tutor');
+    vm.innerHTML='<div class="vm-top"><b>Voice tutor</b><small></small></div>'+
+      '<button type="button" class="vm-orb" aria-label="Tap to interrupt"><span class="o1"></span><span class="o2"></span><span class="o3"></span></button>'+
+      '<p class="vm-status" aria-live="polite"></p><p class="vm-said"></p>'+
+      '<div class="vm-log" hidden></div>'+
+      '<div class="vm-bar"><button type="button" class="vm-b vm-mic" aria-pressed="false" aria-label="Turn the mic off">'+MIC+'</button>'+
+      '<button type="button" class="vm-b vm-txt" aria-pressed="false" aria-label="Show what was said">'+TXT+'</button>'+
+      '<button type="button" class="vm-b vm-end" aria-label="End voice conversation">'+IC.x+'</button></div>'+
+      '<p class="vm-tip">Tip: headphones stop the tutor hearing itself. Answers can be wrong, so check them against your notes.</p>';
+    document.body.append(vm);
+    vm.querySelector('.vm-top small').textContent='About: '+pageTitle();
+    vm.querySelector('.vm-end').onclick=vstop;
+    vm.querySelector('.vm-orb').onclick=function(){if(vst==='speaking'||vst==='thinking')interrupt();else if(vst==='muted')mute(false);};
+    vm.querySelector('.vm-mic').onclick=function(){mute(!vmuted);};
+    vm.querySelector('.vm-txt').onclick=function(){var l=vm.querySelector('.vm-log');l.hidden=!l.hidden;this.setAttribute('aria-pressed',l.hidden?'false':'true');l.scrollTop=l.scrollHeight;};
+    vm.addEventListener('keydown',function(e){if(e.key==='Escape')vstop();});}
+  function vlog(role,text){var l=vm.querySelector('.vm-log'),d=document.createElement('p');d.className=role==='user'?'me':'ai';d.textContent=text;l.append(d);l.scrollTop=l.scrollHeight;return d;}
+  function words(t){return (t.toLowerCase().match(/[a-z0-9]+/g)||[]);}
+  /* is what the mic heard just the tutor's own voice coming out of the speakers? */
+  function echo(t){var w=words(t);if(!w.length)return true;var a=' '+words(vAns).join(' ')+' ',hit=0;w.forEach(function(x){if(a.indexOf(' '+x+' ')>=0)hit++;});return hit/w.length>=0.6;}
+  function startRec(){if(!rec){rec=new SR();rec.lang='en-GB';rec.continuous=true;rec.interimResults=true;
+      rec.onresult=onHeard;
+      rec.onend=function(){recOn=false;used=0;if(vst!=='off'&&!vmuted)setTimeout(function(){if(vst!=='off'&&!vmuted&&!recOn)startRec();},120);};
+      rec.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed'){vmuted=true;vset('muted','Chrome blocked the microphone. Click the mic icon in the address bar, choose Allow, then tap the mic below.');syncMic();}};}
+    if(recOn)return;try{rec.start();recOn=true;}catch(e){}}
+  function onHeard(e){var fin='',tmp='';for(var i=used;i<e.results.length;i++){var r=e.results[i];if(r.isFinal)fin+=r[0].transcript+' ';else tmp+=r[0].transcript+' ';}
+    var now=(fin+tmp).replace(/\s+/g,' ').trim();if(!now)return;
+    if(vst==='speaking'||vst==='thinking'){
+      if(echo(now)||words(now).length<2){if(fin&&!tmp)used=e.results.length;return;}   /* ignore the tutor's own voice and stray noises */
+      interrupt();}
+    if(vst!=='listening')return;
+    heard=now;vm.querySelector('.vm-said').textContent=heard;
+    clearTimeout(silT);silT=setTimeout(function(){used=e.results.length;var q=heard;heard='';if(q)vsend(q);},tmp?1800:900);}
+  function interrupt(){clearTimeout(silT);if(window.GSTTS)GSTTS.hush();if(vctl){vctl.abort();vctl=null;}vDone=true;vset(vmuted?'muted':'listening');}
+  function mute(on){vmuted=on;syncMic();if(on){clearTimeout(silT);heard='';try{rec&&rec.abort();}catch(e){}if(vst==='listening')vset('muted');}
+    else{startRec();if(vst==='muted')vset('listening');}}
+  function syncMic(){if(!vm)return;var b=vm.querySelector('.vm-mic');b.setAttribute('aria-pressed',vmuted?'true':'false');b.classList.toggle('muted',vmuted);b.setAttribute('aria-label',vmuted?'Turn the mic on':'Turn the mic off');}
+  function backToListening(){if(vst==='off')return;if(vDone&&!(window.GSTTS&&GSTTS.talking())){vm.querySelector('.vm-said').textContent='';vset(vmuted?'muted':'listening');}}
+  async function vsend(q){if(!sample||vst==='off')return;vq=q;vset('thinking');vm.querySelector('.vm-said').textContent='“'+q+'”';
+    turns.push({role:'user',content:q});persist();vlog('user',q);
+    var history=turns.slice(-12);while(history.length&&history[0].role!=='user')history.shift();
+    var input=[{role:'user',content:RULES()+VOICE_RULES}].concat(history);
+    vAns='';vDone=false;var spoke=0,line=null,my=vctl=new AbortController();
+    function speak(text,final){var seg=text.slice(spoke),cut=-1;if(!seg)return;
+      if(final)cut=seg.length;else{var re=/[.!?](?=\s)|\n/g,m;while((m=re.exec(seg)))cut=m.index+m[0].length;}
+      if(cut>0&&(final||cut>=25||/[.!?]\s*$/.test(seg.slice(0,cut)))){var part=seg.slice(0,cut).replace(/[|#*_`>]/g,' ');spoke+=cut;
+        if(window.GSTTS){GSTTS.talk(part,backToListening);if(vst==='thinking')vset('speaking');}}}
+    try{var res=await sample(input,{cache:false,fast:true,signal:my.signal,onText:function(u){if(my!==vctl)return;vAns=u.text;if(!line)line=vlog('ai','');line.textContent=u.text;speak(u.text,false);}});
+      if(my!==vctl)return;vAns=res.text;if(!line)line=vlog('ai','');line.textContent=res.text;speak(res.text,true);turns.push({role:'assistant',content:res.text});persist();}
+    catch(e){var said=e&&e.text;if(said){turns.push({role:'assistant',content:said});persist();}
+      if(e&&e.code==='cancelled'){if(!said){turns.pop();persist();}return;}
+      if(!said){turns.pop();persist();}
+      var msg=e&&e.code==='rate_limited'?'Too many questions at once. Give it a minute, then ask again.':e&&e.code==='passcode'?'The tutor needs its passcode. Close this and enter it in the chat first.':'Sorry, something went wrong there. Try asking again.';
+      if(window.GSTTS)GSTTS.talk(msg,backToListening);vlog('ai',msg);}
+    finally{if(my===vctl){vctl=null;vDone=true;if(vst==='thinking')vset('speaking');setTimeout(backToListening,50);}}}
+  function vstart(){if(!SR)return;
+    if(!ready||!sample||(mode==='server'&&needsCode&&!getCode())){open();return;}
+    vbuild();close();vm.hidden=false;document.body.classList.add('vm-open');vmuted=false;syncMic();vm.querySelector('.vm-said').textContent='';
+    var l=vm.querySelector('.vm-log');l.innerHTML='';turns.slice(-6).forEach(function(t){vlog(t.role,t.content);});
+    vset('listening','Say something, for example “explain this page”');vDone=true;startRec();vm.querySelector('.vm-end').focus();}
+  function vstop(){vset('off');clearTimeout(silT);heard='';if(vctl){vctl.abort();vctl=null;}if(window.GSTTS)GSTTS.hush();try{rec&&rec.abort();}catch(e){}recOn=false;
+    if(vm)vm.hidden=true;document.body.classList.remove('vm-open');fab.focus();}
+  if(SR){var vfab=document.createElement('button');vfab.type='button';vfab.className='vm-fab';vfab.title='Talk to the tutor';vfab.setAttribute('aria-label','Talk to the tutor (voice mode)');vfab.innerHTML=HP;vfab.onclick=vstart;
+    var vhead=document.createElement('button');vhead.type='button';vhead.className='ch-ib ch-talk';vhead.title='Voice mode';vhead.setAttribute('aria-label','Switch to voice mode');vhead.innerHTML=HP;vhead.onclick=vstart;
+    box.querySelector('.ch-voice').before(vhead);
+    if(document.body)document.body.append(vfab);else document.addEventListener('DOMContentLoaded',function(){document.body.append(vfab);});}
+  window.GSChat={open:function(q){open(q);},talk:function(){vstart();}};
 })();
