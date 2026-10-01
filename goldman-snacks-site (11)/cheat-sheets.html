@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><script>(function(){var t;try{t=localStorage.getItem("ledgerlab-theme")}catch(e){}if(!t){var m=/gs-theme=(light|dark)/.exec(window.name||"");if(m)t=m[1]}t=t||"light";var r=document.documentElement;window.__gsTheme=t;r.setAttribute("data-theme",t);new MutationObserver(function(){if(r.getAttribute("data-theme")!==window.__gsTheme)r.setAttribute("data-theme",window.__gsTheme)}).observe(r,{attributes:true,attributeFilter:["data-theme"]})})();</script><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cheat sheets · Goldman Snacks</title><meta name="description" content="Visual one-page cheat sheets from the lectures, explained in plain English.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<style>
+.cs-intro{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 18px}
+.cs-toc a{display:inline-block;margin:0 8px 8px 0;padding:6px 14px;border:1px solid var(--rule-strong);border-radius:999px;text-decoration:none}
+.cs-sheet{background:#fff;color:#141B2D;border-radius:16px;padding:26px 28px;margin:0 0 28px;box-shadow:0 2px 14px rgba(10,20,40,.08);border:1px solid var(--rule)}
+.cs-sheet .cs-h{margin:0;font-size:26px;color:#141B2D}.cs-sheet .cs-h span{color:#5C6680;font-weight:400;font-size:18px;margin-left:8px}
+.cs-sheet .sub{margin:6px 0 10px;font-size:17px;color:#2A3450}
+.cs-svg{width:100%;height:auto;display:block}
+.cs-sheet .foot{display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
+.cs-sheet .box{flex:1 1 220px;border-radius:12px;padding:12px 14px;font-size:16px;line-height:1.45}
+.cs-sheet .g{background:#EAF6EF}.cs-sheet .r,.cs-sheet .b2{background:#FBECEB}.cs-sheet .b1,.cs-sheet .b{background:#EEF1F7}.cs-sheet .box b{display:block;font-size:17px;margin-bottom:4px}
+.cs-sheet .box b[style]{display:inline!important}
+.cs-sheet .ex{margin-top:18px;display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+@media (max-width:760px){.cs-sheet .ex{grid-template-columns:1fr}.cs-sheet{padding:16px}}
+.cs-sheet .ex h3{font-size:19px;margin:0 0 8px;color:#141B2D}
+.cs-sheet .steps,.cs-sheet .gl{border:2px solid #DDE2EC;border-radius:12px;padding:14px 18px;font-size:16px;line-height:1.5}
+.cs-sheet .steps ol{margin:0;padding-left:22px}.cs-sheet .steps li{margin-bottom:7px}
+.cs-sheet .gl dl{margin:0}.cs-sheet .gl dt{font-weight:700;margin-top:6px}.cs-sheet .gl dd{margin:0 0 2px;color:#2A3450}
+.cs-sheet .tip{margin-top:14px;background:#FFF6DA;border-radius:12px;padding:12px 16px;font-size:16.5px}
+.cs-print{margin-left:auto}
+@media print{.site-head,.site-foot,.crumbs,.cs-intro,.ch-fab,.vm-fab,.tts-bar{display:none!important}.cs-sheet{box-shadow:none;border:0;page-break-after:always;padding:0}}
+</style>
+</head><body>
+<div id="page" data-page="cheat-sheets">
+<header class="site-head"><div class="wrap head-in">
+    <button class="ghost menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="siteNav">Menu</button>
+    <nav id="siteNav" class="site-nav" aria-label="Main">
+      <a href="start-here.html">Start here</a>
+      <a href="index.html#foundations">Foundations</a>
+      <a href="index.html#statements">Statements</a>
+      <a href="index.html#year3">Year 3</a>
+      <a href="index.html#industry">Industry ready</a>
+      <a href="index.html#onthejob">On the job</a>
+      <a href="mixed-test.html">Mixed test</a>
+      <a href="glossary.html">Glossary</a>
+      <a href="progress.html" aria-current="page">My progress</a>
+    </nav>
+    <a class="brand" href="index.html" aria-label="Goldman Snacks home"><svg class="gs-logo" width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><defs><linearGradient id="gs-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF4F8B"/><stop offset=".55" stop-color="#FF8A3D"/><stop offset="1" stop-color="#8A4DFF"/></linearGradient><mask id="gs-bite"><rect width="34" height="34" fill="#fff"/><circle cx="28.5" cy="4" r="6.2" fill="#000"/><circle cx="33.5" cy="12.5" r="4.6" fill="#000"/><circle cx="21" cy="0" r="4.6" fill="#000"/></mask></defs><g mask="url(#gs-bite)"><circle class="gs-disc" cx="17" cy="17" r="16"/><circle class="gs-ring" cx="17" cy="17" r="14"/><text class="gs-mark" x="16.6" y="21.6" text-anchor="middle">GS</text></g></svg><b>Goldman Snacks</b></a>
+</div></header>
+<main class="wrap">
+<article class="article" style="max-width:none"><nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a> / <span>Cheat sheets</span></nav><h1>Cheat sheets</h1><p class="lede">One-page visual sheets from the lectures, explained in plain English. Look at the picture first, then read the steps.</p>
+<div class="cs-intro"><div class="cs-toc"><a href="#cost-vs-revaluation">Cost model vs revaluation model</a><a href="#revaluation-model">Revaluation model: gains, losses and depreciation</a></div><button type="button" class="btn cs-print" onclick="window.print()">Print or save as PDF</button></div>
+<section class="cs-sheet" id="cost-vs-revaluation">
+<h2 class="cs-h">IAS 16 &amp; IAS 38: cost model vs revaluation model <span>(from lecture notes)</span></h2>
+<p class="sub">An asset bought at cost, then its value goes up, falls, and recovers. What goes in the accounts?</p>
+<svg class="cs-svg" viewBox="0 0 1112 470">
+ <defs><marker id="c-ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#141B2D"/></marker></defs>
+ <rect x="70" y="20" width="700" height="190" fill="#2E8B57" opacity=".08"/><rect x="70" y="210" width="700" height="190" fill="#C8413A" opacity=".08"/>
+ <line x1="70" y1="20" x2="70" y2="400" stroke="#A9B2C6" stroke-width="2"/><line x1="70" y1="400" x2="780" y2="400" stroke="#A9B2C6" stroke-width="2" marker-end="url(#c-ar)"/>
+ <text x="20" y="30" font-size="18" fill="#5C6680">£</text><text x="735" y="430" font-size="16" fill="#5C6680">time</text>
+ <line x1="70" y1="210" x2="770" y2="210" stroke="#141B2D" stroke-width="2.5" stroke-dasharray="9 7"/>
+ <text x="680" y="200" font-size="18" font-weight="700">Cost 100</text>
+ <text x="760" y="40" font-size="15" fill="#1E6B45" text-anchor="end">Above cost → revaluation surplus (OCI)</text>
+ <text x="760" y="390" font-size="15" fill="#9A2E28" text-anchor="end">Below cost → impairment loss (P/L)</text>
+ <!-- curve: up to 150, down to 80, back up to cost -->
+ <path d="M110 210 C150 110, 200 75, 250 75 C320 75, 320 210, 380 290 C420 340, 450 345, 490 345 C540 345, 580 300, 620 210" fill="none" stroke="#24457A" stroke-width="5" stroke-linecap="round"/>
+ <circle cx="250" cy="75" r="7" fill="#24457A"/><text x="250" y="60" font-size="20" font-weight="700" text-anchor="middle">150</text>
+ <!-- cross over the rise -->
+ <g stroke="#C8413A" stroke-width="5" stroke-linecap="round"><line x1="180" y1="70" x2="320" y2="170"/><line x1="320" y1="70" x2="180" y2="170"/></g>
+ <text x="335" y="100" font-size="15" fill="#9A2E28" font-weight="700">Cost model: ignore the rise.</text><text x="335" y="119" font-size="14" fill="#9A2E28">Why? It's an unrealised gain (not sold,</text><text x="335" y="137" font-size="14" fill="#9A2E28">could change). Keep it at what you paid,</text><text x="335" y="155" font-size="14" fill="#9A2E28">which is reliable. Prudence: no gains yet.</text>
+ <circle cx="490" cy="345" r="7" fill="#24457A"/><text x="490" y="378" font-size="20" font-weight="700" text-anchor="middle">80</text>
+ <text x="410" y="378" font-size="17" font-weight="700" fill="#9A2E28" text-anchor="middle">P/L −20</text>
+ <circle cx="620" cy="210" r="7" fill="#24457A"/>
+ <text x="630" y="265" font-size="15" fill="#2A3450">IFRS: reversal allowed,</text><text x="630" y="284" font-size="15" fill="#2A3450">but only back up to cost</text>
+ <!-- balance sheet box -->
+ <g transform="translate(800,40)">
+  <text x="0" y="0" font-size="20" font-weight="700">Balance sheet working</text><text x="0" y="20" font-size="14" fill="#5C6680">(as written in the lecture)</text>
+  <line x1="0" y1="34" x2="300" y2="34" stroke="#141B2D" stroke-width="2"/><line x1="150" y1="34" x2="150" y2="190" stroke="#141B2D" stroke-width="2"/>
+  <text x="8" y="64" font-size="18">P/L</text><text x="140" y="64" font-size="18" text-anchor="end" fill="#9A2E28" font-weight="700">(20)</text>
+  <text x="8" y="100" font-size="18" fill="#5C6680">P/L</text><text x="140" y="100" font-size="18" text-anchor="end" fill="#5C6680">20</text>
+  <line x1="4" y1="94" x2="146" y2="94" stroke="#C8413A" stroke-width="3"/>
+  <text x="160" y="64" font-size="18">Land</text><text x="292" y="64" font-size="18" text-anchor="end">150</text>
+  <text x="292" y="100" font-size="18" text-anchor="end" fill="#9A2E28" font-weight="700">(20)</text>
+  <text x="292" y="136" font-size="18" text-anchor="end" fill="#5C6680">80</text>
+  <line x1="250" y1="130" x2="298" y2="130" stroke="#C8413A" stroke-width="3"/>
+  <g font-size="13.5" fill="#2A3450">
+   <text x="0" y="222" font-weight="700" fill="#9A2E28">Why crossed out?</text>
+   <text x="0" y="244">P/L 20: the impairment reversal.</text>
+   <text x="0" y="262">Not allowed under US GAAP or for</text>
+   <text x="0" y="280">goodwill, so the gain never hits P/L.</text>
+   <text x="0" y="306">80: the impaired value. Under IFRS</text>
+   <text x="0" y="324">the loss is reversed when value</text>
+   <text x="0" y="342">recovers, so it doesn't stay at 80</text>
+   <text x="0" y="360">(it goes back up, but only to cost).</text>
+  </g>
+ </g>
+</svg>
+<div class="foot">
+ <div class="box b1"><b>Cost model (IAS 16 / IAS 38)</b>Asset stays at cost less depreciation and impairment. Rises in value are ignored. Falls below cost are impairment losses in P/L.</div>
+ <div class="box b1"><b>Revaluation model</b>Asset goes to fair value. Rise above cost → OCI (revaluation surplus). Fall: use up the surplus first, then the rest to P/L. IAS 38 only if there is an active market.</div>
+ <div class="box b2"><b>Impairment isn't reversible: US + GW</b>Under <b style="display:inline">US GAAP</b> an impairment is never reversed. For <b style="display:inline">goodwill</b> it is never reversed under IFRS either.</div>
+</div><div class="ex"><div class="steps"><h3>Read it step by step (cost model)</h3><ol>
+<li><b>You buy land for £100.</b> It goes in the accounts at £100. That's the dashed "Cost" line.</li>
+<li><b>The land becomes worth £150.</b> Under the cost model you do <b>nothing</b>. You haven't sold it, so the £50 isn't real money yet. That's why the bump is <b>crossed out</b>.</li>
+<li><b>The land drops to £80.</b> Now it's worth less than you paid. You must write it down to £80 and record a <b>£20 loss in P/L</b> ("P/L (20)" in the box). Rule of thumb: <b>bad news now, good news only when it's real.</b></li>
+<li><b>The land recovers.</b> Under IFRS you can undo the £20 loss, but only back up to the original £100, never higher.</li>
+<li><b>Crossed out "P/L 20":</b> under US rules, or for goodwill, you are <b>not allowed</b> to undo it. The loss stays forever.</li>
+<li><b>Crossed out "80":</b> under IFRS the land doesn't stay at 80, because the loss gets reversed when the value comes back.</li>
+</ol></div><div class="gl"><h3>Words in plain English</h3><dl>
+<dt>Cost</dt><dd>What you paid for the asset. The dashed line.</dd>
+<dt>Carrying amount</dt><dd>The number the asset is shown at in the accounts.</dd>
+<dt>Fair value</dt><dd>What it would sell for today.</dd>
+<dt>Unrealised gain</dt><dd>It's worth more, but you haven't sold it, so you haven't actually got the money.</dd>
+<dt>P/L (profit or loss)</dt><dd>The income statement. Anything here changes this year's profit.</dd>
+<dt>OCI (other comprehensive income)</dt><dd>A separate section under profit. Gains here do NOT count as profit.</dd>
+<dt>Revaluation surplus</dt><dd>A "savings jar" in equity (a reserve) where OCI gains on assets are kept.</dd>
+<dt>Equity</dt><dd>What belongs to the owners: share capital + reserves.</dd>
+<dt>Impairment</dt><dd>The asset is worth less than the books say, so you write it down. That's a loss.</dd>
+<dt>Reversal</dt><dd>The value comes back up, so you undo some of the old write-down.</dd>
+<dt>US GAAP</dt><dd>The American accounting rules (IFRS is the international one you study).</dd>
+<dt>GW (goodwill)</dt><dd>The extra paid when buying a whole company, for its name, customers etc.</dd>
+</dl></div></div><div class="tip"><b>One-line summary:</b> Cost model = stay at what you paid. Ignore rises. Record falls as a loss. Under IFRS you can undo the fall (up to cost), but not under US rules or for goodwill.</div></section>
+<section class="cs-sheet" id="revaluation-model">
+<h2 class="cs-h">Revaluation model: where do gains and losses go? <span>(IAS 16 / IAS 38, from lecture notes)</span></h2>
+<p class="sub">Example: a building (cost £100). The curve shows value only; depreciation is explained below. The flat line is cost. Above it is the revaluation surplus (equity). Below it is profit or loss.</p>
+<svg class="cs-svg" viewBox="0 0 1112 500">
+ <defs><marker id="r-ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#141B2D"/></marker>
+ <marker id="r-ag" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#1E6B45"/></marker>
+ <marker id="r-arr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#9A2E28"/></marker></defs>
+ <rect x="70" y="20" width="900" height="210" fill="#2E8B57" opacity=".09"/><rect x="70" y="230" width="900" height="200" fill="#C8413A" opacity=".08"/>
+ <line x1="70" y1="20" x2="70" y2="430" stroke="#A9B2C6" stroke-width="2"/><line x1="70" y1="430" x2="985" y2="430" stroke="#A9B2C6" stroke-width="2" marker-end="url(#r-ar)"/>
+ <text x="20" y="30" font-size="18" fill="#5C6680">£</text><text x="935" y="462" font-size="16" fill="#5C6680">time</text>
+ <line x1="70" y1="230" x2="970" y2="230" stroke="#141B2D" stroke-width="2.5" stroke-dasharray="9 7"/>
+ <text x="962" y="222" font-size="18" font-weight="700" text-anchor="end">Cost 100</text>
+ <text x="78" y="44" font-size="17" font-weight="700" fill="#1E6B45">ABOVE COST → Equity: revaluation surplus (reserve), via OCI</text>
+ <text x="78" y="420" font-size="17" font-weight="700" fill="#9A2E28">BELOW COST → Profit or loss</text>
+ <path d="M100 230 C150 120, 210 90, 270 90 C340 90, 360 160, 410 230 C450 290, 480 340, 540 340 C600 340, 640 300, 700 230 C740 180, 780 150, 860 140" fill="none" stroke="#24457A" stroke-width="5" stroke-linecap="round"/>
+ <circle cx="270" cy="90" r="7" fill="#24457A"/><text x="270" y="76" font-size="20" font-weight="700" text-anchor="middle">150</text>
+ <circle cx="540" cy="340" r="7" fill="#24457A"/><text x="540" y="372" font-size="20" font-weight="700" text-anchor="middle">80</text>
+ <circle cx="860" cy="140" r="7" fill="#24457A"/><text x="860" y="126" font-size="20" font-weight="700" text-anchor="middle">110</text>
+ <!-- step labels -->
+ <g font-size="15">
+  <circle cx="160" cy="115" r="14" fill="#1E6B45"/><text x="160" y="120" fill="#fff" text-anchor="middle" font-weight="700">1</text>
+  <text x="150" y="190" fill="#1E6B45">Rise 100→150:</text><text x="150" y="208" fill="#1E6B45" font-weight="700">+50 to surplus (OCI)</text>
+  <circle cx="390" cy="190" r="14" fill="#1E6B45"/><text x="390" y="195" fill="#fff" text-anchor="middle" font-weight="700">2</text>
+  <text x="420" y="110" fill="#1E6B45">Fall 150→100:</text><text x="420" y="128" fill="#1E6B45" font-weight="700">−50 from surplus first</text><text x="420" y="146" fill="#1E6B45">(uses it all up)</text>
+  <circle cx="455" cy="295" r="14" fill="#9A2E28"/><text x="455" y="300" fill="#fff" text-anchor="middle" font-weight="700">3</text>
+  <text x="285" y="290" fill="#9A2E28">Fall 100→80:</text><text x="285" y="308" fill="#9A2E28" font-weight="700">−20 impairment, P/L</text>
+  <circle cx="655" cy="290" r="14" fill="#9A2E28"/><text x="655" y="295" fill="#fff" text-anchor="middle" font-weight="700">4</text>
+  <text x="675" y="300" fill="#9A2E28">Recover 80→100:</text><text x="675" y="318" fill="#9A2E28" font-weight="700">+20 back to P/L first</text><text x="675" y="336" fill="#9A2E28">(reverses the old loss)</text>
+  <circle cx="760" cy="168" r="14" fill="#1E6B45"/><text x="760" y="173" fill="#fff" text-anchor="middle" font-weight="700">5</text>
+  <text x="880" y="170" fill="#1E6B45">Above cost again:</text><text x="880" y="188" fill="#1E6B45" font-weight="700">+10 to surplus</text>
+ </g>
+</svg>
+<div class="foot">
+ <div class="box g"><b>Going up</b>Above cost: credit the revaluation surplus (a reserve in equity), shown in OCI. If it reverses an earlier P/L loss, that part goes to P/L first.</div>
+ <div class="box r"><b>Going down</b>Debit the revaluation surplus for that asset first (OCI). Only the part below cost goes to P/L as an impairment loss.</div>
+ <div class="box b"><b>Depreciation: yes!</b>Depreciate the revalued amount over the remaining life (£150 ÷ 10 = £15 a year). Land is never depreciated.</div><div class="box b"><b>Classes</b>Revalue the whole class of assets (all land, all buildings), not just one, so you can't cherry-pick. Keep it up to date.</div>
+</div><div class="ex"><div class="steps"><h3>Read it step by step (revaluation model)</h3><ol>
+<li><b>You buy a building for £100</b> (10-year life). That's the dashed "Cost" line. Above the line = gains go to the <b>savings jar</b> (revaluation surplus). Below the line = losses hit <b>profit (P/L)</b>.</li>
+<li><b>① Worth £150:</b> this time you DO update the accounts to £150. The £50 gain goes into the revaluation surplus via OCI, <b>not</b> into profit, because you haven't sold it.</li>
+<li><b>② Falls back to £100:</b> take the £50 back out of the savings jar first. The jar is now empty. Profit isn't touched.</li>
+<li><b>③ Falls to £80:</b> the jar is empty, so this £20 is a real loss. It's an <b>impairment of £20 in P/L</b>.</li>
+<li><b>④ Rises back to £100:</b> first undo the old £20 loss, so <b>+£20 to P/L</b> (it went through profit, so it comes back through profit).</li>
+<li><b>⑤ Rises to £110:</b> anything above cost goes back into the savings jar: <b>+£10 to the revaluation surplus</b>.</li>
+<li><b>Yes, there is still depreciation.</b> After revaluing, you depreciate the <b>new</b> value. Building revalued to £150 with 10 years left: £150 ÷ 10 = <b>£15 a year</b> to P/L (instead of £10 on the old cost). The extra £5 a year can be moved from the savings jar to retained earnings (Dr revaluation surplus £5, Cr retained earnings £5). That move does <b>not</b> touch profit. <i>Land is the exception: land is never depreciated.</i></li>
+<li><b>"Classes":</b> if you revalue one building you must revalue <b>all</b> your buildings, so you can't just pick the ones that went up.</li>
+</ol></div><div class="gl"><h3>Words in plain English</h3><dl>
+<dt>Cost</dt><dd>What you paid for the asset. The dashed line.</dd>
+<dt>Carrying amount</dt><dd>The number the asset is shown at in the accounts.</dd>
+<dt>Fair value</dt><dd>What it would sell for today.</dd>
+<dt>Unrealised gain</dt><dd>It's worth more, but you haven't sold it, so you haven't actually got the money.</dd>
+<dt>P/L (profit or loss)</dt><dd>The income statement. Anything here changes this year's profit.</dd>
+<dt>OCI (other comprehensive income)</dt><dd>A separate section under profit. Gains here do NOT count as profit.</dd>
+<dt>Revaluation surplus</dt><dd>A "savings jar" in equity (a reserve) where OCI gains on assets are kept.</dd>
+<dt>Depreciation</dt><dd>Spreading the asset's value as an expense over the years you use it.</dd><dt>Retained earnings</dt><dd>Profits kept in the business over the years (part of equity).</dd><dt>Equity</dt><dd>What belongs to the owners: share capital + reserves.</dd>
+<dt>Impairment</dt><dd>The asset is worth less than the books say, so you write it down. That's a loss.</dd>
+<dt>Reversal</dt><dd>The value comes back up, so you undo some of the old write-down.</dd>
+<dt>US GAAP</dt><dd>The American accounting rules (IFRS is the international one you study).</dd>
+<dt>GW (goodwill)</dt><dd>The extra paid when buying a whole company, for its name, customers etc.</dd>
+</dl></div></div><div class="tip"><b>One-line summary:</b> Above cost → savings jar (revaluation surplus, OCI). Below cost → P/L. Going down, empty the jar first. Coming back up, refill P/L first, then the jar. And keep depreciating the new value.</div></section>
+<p>Related topics: <a href="ias-16-property-plant-equipment.html">IAS 16: Property, plant and equipment</a> · <a href="ias-38-intangible-assets.html">IAS 38: Intangible assets</a> · <a href="ias-36-impairment.html">IAS 36: Impairment of assets</a></p>
+</article>
+</main>
+<footer class="site-foot"><div class="wrap foot-in">
+    <div class="brandline"><b>Goldman Snacks</b><p>Accounting revision from double entry to IFRS, with worked examples and practice questions that mark your answers.</p></div>
+    <div><h4>Foundations · Year 1 &amp; 2</h4><ul><li><a href="accounting-equation.html">The accounting equation</a></li><li><a href="debits-and-credits.html">Debits, credits and account types</a></li><li><a href="journal-entries.html">Journal entries</a></li><li><a href="t-accounts.html">T-accounts and balancing off</a></li><li><a href="trial-balance.html">Trial balance</a></li><li><a href="accruals-and-prepayments.html">Accruals and prepayments</a></li><li><a href="depreciation.html">Depreciation and disposals</a></li><li><a href="income-statement.html">Income statement</a></li><li><a href="statement-of-financial-position.html">Statement of financial position</a></li><li><a href="partnerships.html">Partnerships</a></li><li><a href="incomplete-records.html">Incomplete records</a></li></ul></div>
+    <div><h4>Financial statements</h4><ul><li><a href="income-statement-explained.html">Sole trader income statement</a></li><li><a href="balance-sheet-explained.html">Sole trader statement of financial position</a></li><li><a href="company-profit-or-loss-explained.html">Company statement of profit or loss and OCI</a></li><li><a href="company-balance-sheet-explained.html">Company statement of financial position</a></li><li><a href="statement-of-changes-in-equity-explained.html">Statement of changes in equity</a></li><li><a href="cash-flow-statement-explained.html">Statement of cash flows</a></li><li><a href="consolidated-balance-sheet-explained.html">Consolidated statement of financial position</a></li></ul></div>
+    <div><h4>Year 3</h4><ul><li><a href="statement-of-cash-flows.html">Statement of cash flows</a></li><li><a href="ratio-analysis.html">Ratio analysis</a></li><li><a href="ifrs-standards.html">IFRS standards</a></li><li><a href="ias-36-impairment.html">IAS 36: Impairment of assets</a></li><li><a href="ias-12-deferred-tax.html">IAS 12: Deferred tax</a></li><li><a href="ifrs-9-financial-instruments.html">IFRS 9: Financial instruments</a></li><li><a href="ifrs-15-revenue.html">IFRS 15: Revenue in depth</a></li><li><a href="ias-37-provisions.html">IAS 37: Provisions and contingencies</a></li><li><a href="ias-16-property-plant-equipment.html">IAS 16: Property, plant and equipment</a></li><li><a href="ias-38-intangible-assets.html">IAS 38: Intangible assets</a></li><li><a href="ifrs-16-leases.html">IFRS 16: Lease calculations</a></li><li><a href="consolidated-profit-or-loss.html">Consolidated statement of profit or loss</a></li><li><a href="ias-8-policies-estimates-errors.html">IAS 8: Policies, estimates and errors</a></li><li><a href="ias-10-events-after-reporting-period.html">IAS 10: Events after the reporting period</a></li><li><a href="ias-20-government-grants.html">IAS 20: Government grants</a></li><li><a href="ias-23-borrowing-costs.html">IAS 23: Borrowing costs</a></li><li><a href="ias-33-earnings-per-share.html">IAS 33: Earnings per share</a></li><li><a href="ias-40-investment-property.html">IAS 40: Investment property</a></li><li><a href="ias-21-foreign-currency.html">IAS 21: Foreign currency transactions</a></li><li><a href="ifrs-13-fair-value.html">IFRS 13: Fair value measurement</a></li></ul></div>
+    <div><h4>Industry ready</h4><ul><li><a href="audit-basics.html">Audit basics</a></li><li><a href="practical-bookkeeping.html">Practical bookkeeping</a></li><li><a href="group-accounts.html">Group accounts</a></li><li><a href="interview-prep.html">Interview prep</a></li><li><a href="excel-skills.html">Excel skills</a></li><li><a href="reading-an-annual-report.html">Reading an annual report</a></li></ul></div>
+    <div><h4>On the job</h4><ul><li><a href="job-audit-receivables.html">Audit: testing receivables</a></li><li><a href="job-inventory-count.html">Audit: inventory count</a></li><li><a href="job-month-end-close.html">Finance team: month-end close</a></li><li><a href="job-tax-vat-corporation-tax.html">Tax: VAT return and corporation tax</a></li><li><a href="job-going-concern.html">Audit: going concern review</a></li><li><a href="job-audit-payroll.html">Audit: payroll</a></li><li><a href="job-audit-fixed-asset-additions.html">Audit: fixed asset additions</a></li><li><a href="job-new-lease-ifrs16.html">Finance team: accounting for a new lease</a></li></ul></div>
+    <div><h4>Practice</h4><ul><li><a href="start-here.html">Start here</a></li><li><a href="exam.html">Exam questions</a></li><li><a href="mixed-test.html">Mixed test</a></li><li><a href="flashcards.html">Flashcards</a></li><li><a href="written-practice.html">Written answers</a></li><li><a href="review.html">Review my mistakes</a></li><li><a href="summaries.html">Summary sheets</a></li><li><a href="cheat-sheets.html">Cheat sheets</a></li><li><a href="glossary.html">Glossary</a></li><li><a href="acca-map.html">ACCA map</a></li><li><a href="progress.html">My progress</a></li><li><a href="index.html#technique">Exam technique</a></li></ul></div>
+  </div></footer>
+</div>
+<script src="flashdata.js"></script>
+<script src="site.js"></script>
+<script src="tts.js"></script>
+<script src="chat.js"></script>
+<script src="art.js"></script>
+</body></html>
