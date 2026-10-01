@@ -788,7 +788,7 @@
     root.querySelectorAll('[data-r]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.r===S.rule?'true':'false');});
     var p=root.querySelector('.vc-ca');if(p&&!matchMedia('(prefers-reduced-motion: reduce)').matches){var L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;p.getBoundingClientRect();p.style.transition='stroke-dashoffset .9s ease';p.style.strokeDashoffset=0;}}
   var root=document.createElement('figure');root.className='vc';
-  root.innerHTML='<figcaption class="vc-cap"><b>Cost model vs revaluation model</b><span>The same asset over time. Pick a model and step through.</span></figcaption>'+
+  root.innerHTML='<figcaption class="vc-cap"><b>Cost model vs revaluation model</b><span>The same asset over time. Pick a model and step through. Want it on one page? <a href="cheat-sheets.html#cost-vs-revaluation">Open the lecture cheat sheet</a>.</span></figcaption>'+
     '<div class="vc-ctl"><div class="vc-seg" role="group" aria-label="Model"><button type="button" data-m="cost">Cost model</button><button type="button" data-m="reval">Revaluation model</button></div>'+
     '<div class="vc-seg" role="group" aria-label="Rules"><button type="button" data-r="ifrs">IFRS</button><button type="button" data-r="us">US GAAP</button><button type="button" data-r="gw">Goodwill</button></div></div>'+
     '<div class="vc-body"><div class="vc-chart"></div><div class="vc-bs"></div></div>'+
