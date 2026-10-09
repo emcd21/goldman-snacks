@@ -35,7 +35,7 @@ function sdRB(x, y, z, cx, cy, cz, bx, by, bz, r) {
 export function headFields(spec) {
   const F = spec.face, W = F === 'round' ? 1.06 : F === 'long' ? .95 : 1, H = F === 'long' ? 1.06 : F === 'round' ? .97 : 1, J = F === 'square' ? 1 : 0;
   const mouth = spec.mouth || 'smile';
-  const cw = mouth === 'small' ? .031 : .046, up = mouth === 'smile' || mouth === 'grin' ? .009 : mouth === 'small' ? .005 : 0;
+  const cw = mouth === 'small' ? .04 : .058, up = mouth === 'smile' || mouth === 'grin' ? .009 : mouth === 'small' ? .005 : 0;
   const upR = mouth === 'smirk' ? .016 : up, upL = mouth === 'smirk' ? -.002 : up;
   const nose = spec.nose || 'curve';
   const tipY = nose === 'long' ? -.078 : nose === 'button' ? -.06 : -.068, tipZ = nose === 'long' ? .262 : nose === 'button' ? .24 : .25, tipR = nose === 'button' ? .024 : nose === 'broad' ? .029 : .025, wing = nose === 'broad' ? .033 : .026;
@@ -51,20 +51,24 @@ export function headFields(spec) {
     d = smin(d, sdC(x, y, z, 0, .045, .212, 0, tipY + .02, tipZ - .012, .016), .028);
     d = smin(d, sdS(x, y, z, 0, tipY, tipZ, tipR), .022);
     d = smin(d, sdS(ax, y, z, wing, tipY - .012, tipZ - .03, .018), .02);
-    d = smax(d, -sdS(ax, y, z, .016, tipY - .03, tipZ - .02, .009), .006);
+    d = smax(d, -sdE(ax, y, z, .013, tipY - .036, tipZ - .034, .0055, .003, .0065), .004);
     d = smin(d, sdE(ax, y, z, .196 * W, -.012, -.008, .027, .058, .042), .02);
     d = smax(d, -sdS(ax, y, z, .214 * W, -.01, .006, .019), .01);
     d = smin(d, sdC(x, y, z, 0, -.12, -.035, 0, -.52, -.035, .088), .07);
-    d = smin(d, lip(x, y, z) + .002, .012);
+    d = smin(d, lip(x, y, z) + .0015, .014);
     return d;
   };
   // lips: an upper and a lower lip, corners lifted for a smile
+  // each lip is two segments that follow the curve of the muzzle out to the corners
+  const mz = (x, y) => .025 + .185 * sqrt(Math.max(0, 1 - (x / (.158 * W)) ** 2 - ((y + .1 * H) / (.172 * H)) ** 2));
+  const seg = (x, y, z, y0, k, r0, r1, ups, sgn, back) => { const xe = sgn * cw * k, xm = xe * .5, ye = -.137 + ups, ym = (y0 + ye) / 2 + (y0 > -.137 ? .001 : -.0015);
+    return min(sdCT(x, y, z, 0, y0, mz(0, y0) - back, xm, ym, mz(xm, ym) - back - .001, r0, (r0 + r1) / 2), sdCT(x, y, z, xm, ym, mz(xm, ym) - back - .001, xe, ye, mz(xe, ye) - .004, (r0 + r1) / 2, r1)); };
   const lip = (x, y, z) => {
-    const upper = min(sdCT(x, y, z, 0, -.129, .203, -cw, -.137 + upL, .192, .0095, .004), sdCT(x, y, z, 0, -.129, .203, cw, -.137 + upR, .192, .0095, .004));
-    const lower = min(sdCT(x, y, z, 0, -.146, .199, -cw * .85, -.139 + upL, .193, .012, .004), sdCT(x, y, z, 0, -.146, .199, cw * .85, -.139 + upR, .193, .012, .004));
+    const upper = min(seg(x, y, z, -.129, 1, .008, .0025, upL, -1, .005), seg(x, y, z, -.129, 1, .008, .0025, upR, 1, .005));
+    const lower = min(seg(x, y, z, -.147, .88, .0105, .003, upL, -1, .006), seg(x, y, z, -.147, .88, .0105, .003, upR, 1, .006));
     return min(upper, lower);
   };
-  const mouthLine = (x, y, z) => min(sdC(x, y, z, 0, -.1375, .222, -cw * .95, -.136 + upL, .2, 0), sdC(x, y, z, 0, -.1375, .222, cw * .95, -.136 + upR, .2, 0));
+  const mouthLine = (x, y, z) => min(sdC(x, y, z, 0, -.1375, mz(0, -.1375) + .004, -cw * .5, -.1375 + upL * .4, mz(cw * .5, -.137) + .004, 0), sdC(x, y, z, 0, -.1375, mz(0, -.1375) + .004, cw * .5, -.1375 + upR * .4, mz(cw * .5, -.137) + .004, 0), sdC(x, y, z, -cw * .5, -.1375 + upL * .4, mz(cw * .5, -.137) + .004, -cw, -.137 + upL, mz(cw, -.137), 0), sdC(x, y, z, cw * .5, -.1375 + upR * .4, mz(cw * .5, -.137) + .004, cw, -.137 + upR, mz(cw, -.137), 0));
   // the hairline: hair is kept where this is positive
   const hl = (x, y, z, off = 0) => (y - .02) * .88 - z * .47 - off + .005 * Math.sin(x * 70) + .003 * Math.sin(x * 160 + 1);
   const hs = spec.hair;
@@ -86,6 +90,7 @@ export function headFields(spec) {
     // sideburns, then cut at the hairline
     if (hs !== 'long') d = smin(d, sdC(ax, y, z, .188 * W, .05, .055, .19 * W, -.035, .065, .014), .02);
     const cut = hs === 'long' ? min(hl(x, y, z, .0), .07 - z + (y + .1) * .2) : hl(x, y, z, hs === 'slick' ? .012 : 0);
+    if (hs !== 'curly' && hs !== 'buzz') d += .0014 * Math.sin(x * 230 + Math.sin(y * 29 + z * 17) * 1.8) + .0007 * Math.sin(x * 520 + z * 40);
     return smax(d, -max(cut, (hs !== 'long' ? -sdC(ax, y, z, .188 * W, .06, .055, .19 * W, -.045, .065, .02) : -1)), .015);
   };
   const browY = { arched: [.072, .086, .07], serious: [.062, .074, .078], straight: [.074, .074, .072], thick: [.073, .08, .072] }[spec.brows] || [.072, .079, .07];
@@ -155,7 +160,7 @@ export function sculptHead(spec, step = .0075) {
   const skinC = hex(spec.skin), hairC = hex(spec.hairCol), browC = spec.hair === 'bald' ? skinC.map(c => c * .5) : hairC.map(c => c * .7), lipC = skinC.map((c, i) => c * [.8, .55, .52][i]);
   const FADE = ['short', 'quiff', 'slick', 'side', 'messy', 'buzz'].includes(spec.hair);
   const fr = spec.marks === 'freckles' ? [[.07, -.04], [.09, -.02], [.11, -.05], [.06, -.06], [.1, -.075], [.125, -.03], [.08, -.085]] : [];
-  const e = step * .5;
+  const e = step * .5, tipYc = { long: -.078, button: -.06 }[spec.nose] ?? -.068;
   for (let i = 0; i < n; i++) {
     const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
     const a = total(x + e, y - e, z - e), b = total(x - e, y - e, z + e), c4 = total(x - e, y + e, z - e), d4 = total(x + e, y + e, z + e);
@@ -169,6 +174,13 @@ export function sculptHead(spec, step = .0075) {
     if (spec.marks === 'blush') c = mix(c, c.map((v, j) => v * [1.08, .86, .86][j]), ss(.05, 0, sdS(abs(x), y, z, .1, -.04, .17, .0)));
     if (spec.marks === 'mole') c = mix(c, c.map(v => v * .3), ss(.002, -.001, sdS(x, y, z, .07, -.15, .19, .006)));
     for (const [fx, fy] of fr) if (z > .12) c = mix(c, c.map(v => v * .7), ss(.003, -.001, sdS(abs(x), y, z, fx, fy, .2, .0065)));
+    // living skin: warmer nose, cheeks and ears, a shade under the brows and in the eye sockets, a cooler jaw
+    const warm = c.map((v, j) => v * [1.06, .9, .88][j]);
+    c = mix(c, warm, .55 * ss(.06, 0, sdS(abs(x), y, z, .09, -.045, .17, 0)));
+    c = mix(c, warm, .6 * ss(.035, 0, sdS(x, y, z, 0, tipYc, .24, 0)));
+    c = mix(c, warm, .5 * ss(.03, 0, sdS(abs(x), y, z, .2, -.01, 0, 0)));
+    c = mix(c, c.map((v, j) => v * [.88, .83, .84][j]), .4 * ss(.03, .004, sdE(abs(x), y, z, .07, .02, .2, .045, .026, .03)));
+    if (!spec.beard || spec.beard === 'none') c = mix(c, c.map((v, j) => v * [.94, .95, 1][j]), .5 * ss(-.12, -.2, y) * ss(.05, .15, z));
     c = mix(c, lipC, wl);
     c = mix(c, lipC.map(v => v * .45), z > .17 ? ss(.004, .001, P.mouthLine(x, y, z)) : 0);
     c = mix(c, browC, wb);

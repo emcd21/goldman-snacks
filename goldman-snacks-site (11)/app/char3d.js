@@ -5,6 +5,10 @@
 import * as THREE from './vendor/three.module.min.js';
 import { RoomEnvironment } from './vendor/RoomEnvironment.js';
 import { sculptHead } from './sculpt.js';
+import { EffectComposer } from './vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
+import { GTAOPass } from './vendor/jsm/postprocessing/GTAOPass.js';
+import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 
 const TAU = Math.PI * 2;
 const HEAD_Y = 3.12, HEAD_Z = .02;
@@ -43,9 +47,33 @@ function envFor(r) {
 }
 
 /* ---------- materials ---------- */
+const IRIS = {};
+function irisTex(c) {
+  if (IRIS[c]) return IRIS[c];
+  const t = canvasTex(128, 128, (g) => {
+    const base = new THREE.Color(c), hsl = {}; base.getHSL(hsl);
+    const hx = (l, a = 1) => { const k = new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s * 1.1), Math.max(0, Math.min(1, l))); return `rgba(${k.r * 255 | 0},${k.g * 255 | 0},${k.b * 255 | 0},${a})`; };
+    const r0 = g.createRadialGradient(64, 64, 10, 64, 64, 64); r0.addColorStop(0, hx(hsl.l * .55)); r0.addColorStop(.35, hx(hsl.l * 1.05)); r0.addColorStop(.8, hx(hsl.l)); r0.addColorStop(.93, hx(hsl.l * .45)); r0.addColorStop(1, hx(hsl.l * .25));
+    g.fillStyle = r0; g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 180; i++) { const a = Math.random() * TAU, r1 = 16 + Math.random() * 10, r2 = 40 + Math.random() * 20; g.strokeStyle = Math.random() < .5 ? hx(hsl.l * 1.6, .35) : hx(hsl.l * .5, .35); g.lineWidth = .6 + Math.random(); g.beginPath(); g.moveTo(64 + Math.cos(a) * r1, 64 + Math.sin(a) * r1); g.lineTo(64 + Math.cos(a + .05) * r2, 64 + Math.sin(a + .05) * r2); g.stroke(); }
+    g.fillStyle = '#0A0706'; g.beginPath(); g.arc(64, 64, 22, 0, TAU); g.fill();
+  });
+  t.userData.keep = true; return IRIS[c] = t;
+}
 const col = c => new THREE.Color(c);
 const shade = (hex, f) => { const c = col(hex); const h = { h: 0, s: 0, l: 0 }; c.getHSL(h); c.setHSL(h.h, h.s, Math.max(0, Math.min(1, h.l + f))); return '#' + c.getHexString(); };
-const cloth = (c, map) => new THREE.MeshPhysicalMaterial({ color: map ? 0xffffff : c, map: map || null, roughness: 0.82, metalness: 0, sheen: .6, sheenRoughness: .7, sheenColor: col(map ? '#888888' : shade(c, .25)) });
+// a fine twill weave as a normal map, shared by all the cloth
+let WEAVE = null;
+function weave() {
+  if (WEAVE) return WEAVE;
+  const n = 64, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'), img = g.createImageData(n, n);
+  const hgt = (x, y) => .5 + .5 * Math.sin((x + y) / n * TAU * 8) * (.75 + .25 * Math.sin(x / n * TAU * 16)) + .15 * Math.sin(y / n * TAU * 32);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const dx = hgt(x + 1, y) - hgt(x - 1, y), dy = hgt(x, y + 1) - hgt(x, y - 1), l = Math.hypot(dx, dy, 1), i = (y * n + x) * 4; img.data[i] = 128 - dx / l * 127; img.data[i + 1] = 128 - dy / l * 127; img.data[i + 2] = 255 / l * .5 + 127; img.data[i + 3] = 255; }
+  g.putImageData(img, 0, 0);
+  WEAVE = new THREE.CanvasTexture(c); WEAVE.wrapS = WEAVE.wrapT = THREE.RepeatWrapping; WEAVE.anisotropy = 4;
+  return WEAVE;
+}
+const cloth = (c, map, rep = 26) => { const w = weave().clone(); w.repeat.set(rep, rep); w.needsUpdate = true; return new THREE.MeshPhysicalMaterial({ color: map ? 0xffffff : c, map: map || null, normalMap: w, normalScale: new THREE.Vector2(.45, .45), roughness: 0.8, metalness: 0, sheen: .6, sheenRoughness: .65, sheenColor: col(map ? '#8a8a8a' : shade(c, .22)) }); };
 const plastic = (c, rough = 0.35) => new THREE.MeshPhysicalMaterial({ color: c, roughness: rough, clearcoat: 0.4, clearcoatRoughness: 0.3 });
 const metal = (c, rough = 0.28) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: .85 });
 const flat = (c, opacity = 1) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, transparent: opacity < 1, opacity, depthWrite: opacity >= 1, polygonOffset: true, polygonOffsetFactor: -2 });
@@ -211,7 +239,7 @@ function build(spec, step) {
     const sole = mesh(new THREE.CapsuleGeometry(.086, .21, 6, 20), plastic(O.sneakers ? '#FAFAFA' : '#2A1E17', .6)); sole.rotation.x = Math.PI / 2; sole.scale.set(1.08, 1, .26); sole.position.set(sx, .025, .07); body.add(sole);
   }
   // torso
-  const torso = mesh(loft(BODY, { e: 2.5 }), cloth(null, paintTorso(spec, O))); body.add(torso); parts.torso = torso;
+  const torso = mesh(loft(BODY, { e: 2.5 }), cloth(null, paintTorso(spec, O), 60)); body.add(torso); parts.torso = torso;
   if (tucked) { body.add(mesh(loft([[1.5, .338, .208], [1.57, .338, .208]], { top: false, bottom: false }), plastic('#2A2420', .45))); body.add(mesh(new THREE.BoxGeometry(.07, .055, .02), metal(GOLD), 0, 1.535, frontZ(1.53) + .004)); }
   // collar, tie
   if (O.kind === 'qzip') { const c = mesh(loft([[2.8, .13, .12, -.025], [2.97, .118, .108, -.025]], { top: false, bottom: false, e: 2 }), cloth(shade(O.body, -.04))); c.material.side = THREE.DoubleSide; body.add(c); body.add(mesh(new THREE.BoxGeometry(.012, .16, .01), metal('#C9D3DD'), 0, 2.88, .1)); }
@@ -272,15 +300,16 @@ function build(spec, step) {
   const faceM = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: .5, sheen: .35, sheenColor: col('#ffb4a0'), sheenRoughness: .6 });
   parts.ready = headGeo(spec, step).then(g => { const m = new THREE.Mesh(g, [faceM, hairM]); m.castShadow = true; m.receiveShadow = false; head.add(m); return root; });
   const eyeC = spec.eyes === 'dot' || spec.eyes === 'lash' || spec.eyes === 'sleepy' ? '#3B2A20' : spec.eyeCol;
-  const lidOpen = { round: -.55, wide: -.72, almond: -.3, sleepy: -.05, lash: -.42 }[spec.eyes] ?? -.36;
+  const lidOpen = { round: -.38, wide: -.6, almond: -.22, sleepy: -.02, lash: -.36 }[spec.eyes] ?? -.28;
   parts.eyes = []; parts.lids = [];
   for (const s of [-1, 1]) {
     const eg = new THREE.Group(); eg.position.set(s * .071, .004, .194); head.add(eg);
     const ball = new THREE.Group(); eg.add(ball);
-    ball.add(mesh(new THREE.SphereGeometry(.033, 24, 18), new THREE.MeshPhysicalMaterial({ color: '#F4F1EC', roughness: .15, clearcoat: 1, clearcoatRoughness: .05 })));
-    const ir = mesh(new THREE.CircleGeometry(.0155, 28), new THREE.MeshPhysicalMaterial({ color: eyeC, roughness: .3, clearcoat: 1 }), 0, 0, .0325); ball.add(ir);
-    ball.add(mesh(new THREE.CircleGeometry(.0072, 20), new THREE.MeshBasicMaterial({ color: '#0B0807' }), 0, 0, .033));
-    ball.add(mesh(new THREE.CircleGeometry(.0028, 10), new THREE.MeshBasicMaterial({ color: '#ffffff' }), .005, .006, .0335));
+    ball.add(mesh(new THREE.SphereGeometry(.033, 24, 18), new THREE.MeshPhysicalMaterial({ color: '#EAE3DA', roughness: .15, clearcoat: 1, clearcoatRoughness: .05 })));
+    // the iris: a painted texture with radial fibres, a darker limbal ring and the pupil, under a glossy cornea
+    const ir = mesh(new THREE.CircleGeometry(.0158, 40), new THREE.MeshPhysicalMaterial({ map: irisTex(eyeC), roughness: .4 }), 0, 0, .0318); ball.add(ir);
+    const cornea = mesh(new THREE.SphereGeometry(.0185, 24, 10, 0, TAU, 0, .75), new THREE.MeshPhysicalMaterial({ color: '#000000', transparent: true, opacity: .3, roughness: 0, clearcoat: 1, clearcoatRoughness: 0, depthWrite: false, envMapIntensity: .7 }), 0, 0, .021); cornea.rotation.x = Math.PI / 2; ball.add(cornea);
+    ball.add(mesh(new THREE.CircleGeometry(.0022, 12), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .9 }), .0052, .0062, .0352));
     parts.eyes.push(ball);
     const lidM = new THREE.MeshPhysicalMaterial({ color: shade(spec.skin, -.03), roughness: .5, sheen: .3, sheenColor: col('#ffb4a0') });
     const lid = mesh(new THREE.SphereGeometry(.0355, 24, 12, 0, TAU, 0, Math.PI / 2), lidM); lid.rotation.x = lidOpen; eg.add(lid);
@@ -407,11 +436,12 @@ function pose(parts, t, st) {
   }
 }
 
-function sceneFor() {
+function sceneFor(bg) {
   const sc = new THREE.Scene();
+  if (bg) { const t = canvasTex(64, 256, (c) => { const g = c.createLinearGradient(0, 0, 0, 256); g.addColorStop(0, '#FFFFFF'); g.addColorStop(.5, '#D4EBFA'); g.addColorStop(1, '#8CC4EC'); c.fillStyle = g; c.fillRect(0, 0, 64, 256); }); sc.background = t; sc.backgroundIntensity = 1.45; }
   sc.add(new THREE.HemisphereLight('#E4F5FF', '#5E7F55', .4));
   const key = new THREE.DirectionalLight('#FFF1E0', 2.4); key.position.set(.7, 6, 5); key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024); Object.assign(key.shadow.camera, { left: -2, right: 2, top: 4.2, bottom: -.5, near: .5, far: 14 }); key.shadow.bias = -.0004; key.shadow.normalBias = .02; key.shadow.radius = 4;
+  key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -2, right: 2, top: 4.2, bottom: -.5, near: .5, far: 14 }); key.shadow.bias = -.0004; key.shadow.normalBias = .02; key.shadow.radius = 4;
   sc.add(key); sc.add(key.target); key.target.position.set(0, 1.6, 0);
   const rim = new THREE.DirectionalLight('#A9DBFF', 3.0); rim.position.set(-3.5, 4, -4); sc.add(rim);
   const rim2 = new THREE.DirectionalLight('#FFE3C4', 1.0); rim2.position.set(3.5, 2.5, -3); sc.add(rim2);
@@ -420,7 +450,7 @@ function sceneFor() {
   const ao = mesh(new THREE.PlaneGeometry(1.4, .9), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); ao.rotation.x = -Math.PI / 2; ao.position.y = .003; sc.add(ao);
   return sc;
 }
-function dispose(o) { o.traverse(n => { if (n.geometry && !n.geometry.userData.keep) n.geometry.dispose(); const ms = Array.isArray(n.material) ? n.material : n.material ? [n.material] : []; ms.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); }); }
+function dispose(o) { o.traverse(n => { if (n.geometry && !n.geometry.userData.keep) n.geometry.dispose(); const ms = Array.isArray(n.material) ? n.material : n.material ? [n.material] : []; ms.forEach(m => { if (m.map && !m.map.userData.keep) m.map.dispose(); if (m.normalMap && m.normalMap !== WEAVE) m.normalMap.dispose(); m.dispose(); }); }); }
 
 /* ---------- live view ---------- */
 const L = { r: null, canvas: null, scene: null, cam: null, char: null, key: '', st: { wave: 0, blink: 0, nod: 0, tilt: 0, look: 0 }, yaw: 0, vyaw: 0, drag: null, dragged: false, raf: 0, last: 0, nextBlink: 2, gen: 0 };
@@ -428,8 +458,15 @@ export function live(host, spec, placeholder) {
   if (!L.r) {
     L.canvas = document.createElement('canvas'); L.canvas.className = 'c3';
     L.r = renderer(L.canvas); L.r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    L.scene = sceneFor(); L.scene.environment = envFor(L.r); L.scene.environmentIntensity = .6;
+    L.scene = sceneFor(true); L.scene.environment = envFor(L.r); L.scene.environmentIntensity = .6;
     L.cam = new THREE.PerspectiveCamera(22, .75, .1, 60);
+    // post-processing: ambient occlusion for depth in the folds, collar and face, multisampled
+    try {
+      const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+      L.comp = new EffectComposer(L.r, rt); L.comp.addPass(new RenderPass(L.scene, L.cam));
+      const ao = new GTAOPass(L.scene, L.cam, 4, 4); ao.updateGtaoMaterial({ radius: .05, distanceExponent: 1.4, thickness: 1.2, scale: 1.3, samples: 16 }); ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, rings: 2, samples: 16 }); ao.blendIntensity = .55; L.comp.addPass(ao);
+      L.comp.addPass(new OutputPass());
+    } catch (e) { L.comp = null; }
     const c = L.canvas;
     c.addEventListener('pointerdown', e => { L.drag = { x: e.clientX, y0: L.yaw, moved: 0, id: e.pointerId }; L.dragged = false; });
     c.addEventListener('pointermove', e => { if (!L.drag) return; const dx = e.clientX - L.drag.x; L.drag.moved = Math.max(L.drag.moved, Math.abs(dx)); if (L.drag.moved > 6) { L.dragged = true; try { c.setPointerCapture(L.drag.id); } catch (er) { } } const ny = L.drag.y0 + dx * .012; L.vyaw = ny - L.yaw; L.yaw = ny; });
@@ -440,7 +477,7 @@ export function live(host, spec, placeholder) {
   }
   const k = JSON.stringify(spec);
   if (k !== L.key) {
-    L.key = k; const gen = ++L.gen, ch = build(spec, .0062);
+    L.key = k; const gen = ++L.gen, ch = build(spec, .0052);
     L.ready = ch.userData.ready.then(() => { if (gen !== L.gen) return; if (L.char) { L.scene.remove(L.char); dispose(L.char); } L.char = ch; L.scene.add(ch); });
   }
   // show the canvas (in place of the placeholder) once he is ready
@@ -450,8 +487,8 @@ export function live(host, spec, placeholder) {
 }
 function size() {
   const c = L.canvas, w = c.clientWidth || 240, h = c.clientHeight || w / .75;
-  const pr = L.r.getPixelRatio(); if (c.width !== Math.round(w * pr) || c.height !== Math.round(h * pr)) L.r.setSize(w, h, false);
-  L.cam.aspect = w / h; L.cam.position.set(0, 3.0, 4.3); L.cam.lookAt(0, 2.78, 0); L.cam.updateProjectionMatrix();
+  const pr = L.r.getPixelRatio(); if (c.width !== Math.round(w * pr) || c.height !== Math.round(h * pr)) { L.r.setSize(w, h, false); if (L.comp) { L.comp.setPixelRatio(pr); L.comp.setSize(w, h); } }
+  L.cam.aspect = w / h; L.cam.position.set(0, 3.24, 4.3); L.cam.lookAt(0, 2.8, 0); L.cam.updateProjectionMatrix();
 }
 function loop(now) {
   if (!L.canvas.isConnected) { L.raf = 0; return; }
@@ -467,7 +504,7 @@ function loop(now) {
   const ch = L.char;
   ch.rotation.y = L.yaw + Math.sin(t * .25) * .16 - .06;
   pose(ch.userData, t, st);
-  L.r.render(L.scene, L.cam);
+  if (L.comp) L.comp.render(); else L.r.render(L.scene, L.cam);
 }
 export function wave() { L.st.wave = 1.9; L.st.blink = 0; }
 export function consumeDrag() { const d = L.dragged; L.dragged = false; return d; }
@@ -475,7 +512,7 @@ export function consumeDrag() { const d = L.dragged; L.dragged = false; return d
 /* ---------- stills ---------- */
 export async function shot(spec, view, w = 240, h = 300) {
   if (!SHOT) { const c = document.createElement('canvas'); SHOT = { r: renderer(c), cam: new THREE.PerspectiveCamera(22, 1, .1, 60) }; SHOT.r.setPixelRatio(1); SHOT.scene = sceneFor(); SHOT.scene.environment = envFor(SHOT.r); SHOT.scene.environmentIntensity = .6; }
-  const ch = build(spec, view === 'head' ? .009 : .011);
+  const ch = build(spec, view === 'head' ? .008 : .0085);
   await ch.userData.ready;
   const { r, cam, scene } = SHOT;
   r.setSize(w, h, false);
