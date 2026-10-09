@@ -423,7 +423,7 @@ function finishLesson() {
   const Lz = LESSON, acc = Lz.answered ? Lz.ok / Lz.answered : 1, perfect = Lz.answered > 0 && Lz.mistakes === 0;
   if (Lz.onDone) Lz.onDone(acc);
   if (perfect) Lz.xp += 15;
-  const lvlBefore = levelOf(S.xp), gBefore = gardenLevel();
+  const lvlBefore = levelOf(S.xp), gBefore = gardenLevel(), uBefore = unlockedIds();
   addXP(Lz.xp);
   S.stats.lessons++; S.stats.correct += Lz.ok; S.stats.answered += Lz.answered;
   S.stats.maxCombo = Math.max(S.stats.maxCombo, Lz.maxCombo); if (perfect) S.stats.perfect++;
@@ -444,6 +444,9 @@ function finishLesson() {
     lvlAfter > lvlBefore ? unlockRow(ICON.trophy, 'Level up', `You are now ${titleOf(lvlAfter)[1]}.`, `<span class="pill solid p-white">Level ${lvlAfter}</span>`) : '',
     goalHit ? unlockRow(ICON.flame, 'Daily goal reached', `Your streak is ${S.streak} day${S.streak === 1 ? '' : 's'}.`, `<span class="pill solid p-green">${ICON.check}Done</span>`) : '',
     ...ach.map(a => unlockRow(CODE(a.g), a.name, a.desc, '<span class="pill solid p-lime">New</span>')),
+    ...[...OUTFITS, ...EXTRAS].filter(x => unlockedBy(x) && !uBefore.has(x.id)).map(x => OUTFITS.includes(x)
+      ? unlockRow(charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } }), `New outfit: ${x.name}`, 'Put it on in the wardrobe on your Profile.', '<span class="pill solid p-lime">Wardrobe</span>')
+      : unlockRow(ICON.star, `New extra: ${x.name}`, 'Add it in the wardrobe on your Profile.', '<span class="pill solid p-lime">Wardrobe</span>')),
     ...GARDEN.slice(gBefore, gardenLevel()).map(g => unlockRow(g.pet ? petPic(g.pet) : ICON.sprout, g.name, `${g.desc} Balsam’s Garden is coming back to life.`, '<span class="pill solid p-lime">Garden</span>')),
   ].join('');
   const title = Lz.mock ? `Mock score ${Lz.mockPct}%` : perfect ? 'Flawless!' : acc >= .8 ? 'Lesson complete!' : 'Done, keep going!';
@@ -537,7 +540,7 @@ const lastDays = n => Array.from({ length: n }, (_, i) => { const d = new Date()
 function topbar() {
   const st = liveStreak(), lvl = levelOf(S.xp);
   return `<div class="topbar-in"><div class="brand"><span class="logo">${ICON.ledger}</span><span class="bname">Goldman Snacks</span></div>
-    <div class="stats"><span class="pill p-white ${st ? '' : 'cold'}" title="Day streak">${ICON.flame}<span class="num">${st}</span></span><span class="pill p-lime" title="Total XP">${ICON.bolt}<span class="num">${S.xp}</span></span><span class="pill p-grey" title="Level">Lv ${lvl}</span></div></div>`;
+    <div class="stats"><span class="pill p-white ${st ? '' : 'cold'}" title="Day streak">${ICON.flame}<span class="num">${st}</span></span><span class="pill p-lime" title="Total XP">${ICON.bolt}<span class="num">${S.xp}</span></span><span class="pill p-grey" title="Level">Lv ${lvl}</span><button class="me-av" data-go="me" aria-label="Your profile">${charSVG({ head: true })}</button></div></div>`;
 }
 const atRisk = () => liveStreak() > 0 && S.last !== dayKey();
 function goalCard(cls = '') {
@@ -832,7 +835,9 @@ function viewMe() {
   const when = v => v > 1e12 ? new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Earned';
   const nums = [['Current streak', plural(liveStreak(), 'day')], ['Best streak', plural(S.best, 'day')], ['Lessons finished', S.stats.lessons], ['Topics complete', `${PATH.filter(isComplete).length} of ${PATH.length}`], ['Accuracy', acc + '%'], ['Best run', `${S.stats.maxCombo} in a row`], ['Notes read', Object.keys(S.readLog).length]];
   return `<div class="page">
-    ${scene('scene-sm', `<span class="eyebrow">Profile</span><h1 class="display">Your progress</h1>`, SCENE_LAND.me, 92)}
+    ${scene('scene-me', `<span class="eyebrow">Profile · Level ${lvl}</span><h1 class="display">${esc(t[1])}</h1>
+      <div class="scene-cta"><button class="btn lg white" data-wardrobe>Dress up</button></div>`, `<button class="me-stand" data-wardrobe aria-label="Open the wardrobe">${charSVG({ orb: true })}</button>`, 92)}
+    ${charCard()}
     <section class="card glow stack lvlcard">
       <div class="list-head"><h3>Level ${lvl}</h3><span class="pill p-lime">${t[1]}</span></div>
       <div class="inner"><span class="tile">${ICON.trophy}</span><b class="bignum">${S.xp.toLocaleString('en')}</b><span class="cap">XP earned<br>${plural(S.stats.lessons, 'lesson')} finished</span></div>
@@ -943,6 +948,7 @@ function wireCommon(app) {
     startLesson({ steps });
   });
   wireTerms(app);
+  app.querySelectorAll('[data-wardrobe]').forEach(b => b.onclick = () => wardrobe());
   app.querySelectorAll('[data-noinstall]').forEach(b => b.onclick = () => { S.settings.noInstall = true; save(); render(); });
   app.querySelectorAll('[data-install]').forEach(b => b.onclick = async () => { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) { } INSTALL = null; render(); });
   app.querySelectorAll('[data-xfer="copy"]').forEach(b => b.onclick = () => {
@@ -973,6 +979,202 @@ function testOut(ui) {
     if (LESSON.firstOk >= Math.min(10, steps.length - 2)) { S.unlockedTo = Math.max(S.unlockedTo, PATH.findIndex(l => l.unit === ui)); toast(`Unlocked: ${U[ui].title}`); }
     else toast('Not this time. The earlier units will build you up.');
   } });
+}
+
+/* ================= your character =================
+   A character you dress yourself. Looks (skin, hair, facial hair, glasses, tie colour) are free from the start;
+   outfits unlock with your level, from a plain white shirt or a quarter-zip up to the boss suit, and extras
+   unlock with levels and achievements. He stands in a glass bubble on the Profile meadow. */
+const SKINS = ['#F6D9C6', '#EDC3A3', '#D9A27C', '#B97B55', '#8D5A3B', '#5E3B27'];
+const HAIR_COLS = [['#1F1B18', 'Black'], ['#3E2B20', 'Dark brown'], ['#71502F', 'Brown'], ['#D8B36C', 'Blonde'], ['#B5582B', 'Ginger'], ['#A7A7A7', 'Grey']];
+const HAIRS = [['short', 'Short'], ['side', 'Side part'], ['buzz', 'Buzz cut'], ['curly', 'Curly'], ['quiff', 'Quiff'], ['long', 'Long'], ['bun', 'Bun'], ['bald', 'Bald']];
+const BEARDS = [['none', 'None'], ['stubble', 'Stubble'], ['tash', 'Moustache'], ['beard', 'Beard']];
+const GLASSES = [['none', 'None'], ['round', 'Round'], ['square', 'Square']];
+const TIES = ['#8C1C2B', '#1F4E9C', '#2E7D4F', '#5B3A8C', '#C9A227', '#9AA4B1'];
+// Outfits, in the order they unlock. lvl is the level that unlocks it.
+const OUTFITS = [
+  { id: 'white', name: 'Plain white shirt', lvl: 1, desc: 'Day one. Sleeves rolled, ready to learn.' },
+  { id: 'qzip', name: 'Quarter-zip', lvl: 1, desc: 'The trainee classic.' },
+  { id: 'shirttie', name: 'Shirt and tie', lvl: 3, desc: 'Bookkeeper smart.' },
+  { id: 'blazer', name: 'Navy blazer', lvl: 5, desc: 'Client meeting ready.' },
+  { id: 'grey', name: 'Grey suit', lvl: 6, desc: 'An accounts assistant’s first suit.' },
+  { id: 'navy', name: 'Navy suit', lvl: 10, desc: 'Qualified accountant.' },
+  { id: 'three', name: 'Three-piece suit', lvl: 15, desc: 'Senior, with a waistcoat to prove it.' },
+  { id: 'boss', name: 'The boss suit', lvl: 20, desc: 'Black pinstripe, gold tie. Finance director.' },
+];
+// Extras: things he wears (on) and one thing he holds (hold). Each unlocks by level or by an achievement.
+const EXTRAS = [
+  { id: 'lanyard', name: 'Office pass', kind: 'on', lvl: 2 },
+  { id: 'pen', name: 'Pen in pocket', kind: 'on', lvl: 4 },
+  { id: 'pin', name: 'Gold lapel pin', kind: 'on', lvl: 18, jacket: true },
+  { id: 'mug', name: 'Coffee mug', kind: 'hold', ach: 'streak7' },
+  { id: 'calc', name: 'Calculator', kind: 'hold', ach: 'mock' },
+  { id: 'laptop', name: 'Laptop', kind: 'hold', lvl: 8 },
+  { id: 'case', name: 'Leather briefcase', kind: 'hold', lvl: 12 },
+  { id: 'trophy', name: 'Exam trophy', kind: 'hold', ach: 'mock80' },
+];
+const JACKETS = { blazer: 1, grey: 1, navy: 1, three: 1, boss: 1 };
+const meDefault = () => ({ skin: 1, hair: 'short', hairCol: 1, beard: 'none', glasses: 'none', tie: 0, outfit: 'white', on: {}, hold: '' });
+const ME = () => (S.me = Object.assign(meDefault(), S.me));
+const achName = id => (ACH.find(a => a[0] === id) || [, id])[1];
+const unlockedBy = x => x.ach ? !!S.ach[x.ach] : levelOf(S.xp) >= x.lvl;
+const needText = x => x.ach ? `Earn “${achName(x.ach)}”` : `Level ${x.lvl}`;
+const unlockedIds = () => new Set([...OUTFITS, ...EXTRAS].filter(unlockedBy).map(x => x.id));
+const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f)); return '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''); };
+
+let CHAR_N = 0;
+// The character as SVG. opt.orb puts him in a glass bubble; opt.head crops to his head (the top bar);
+// opt.preview draws an outfit in a tile; opt.me overrides what he wears.
+function charSVG(opt = {}) {
+  const m = Object.assign({}, ME(), opt.me || {}), id = 'c' + (++CHAR_N);
+  const skin = SKINS[m.skin] || SKINS[1], skinD = shade(skin, -.16), hc = (HAIR_COLS[m.hairCol] || HAIR_COLS[1])[0], hcD = shade(hc, -.25);
+  const o = m.outfit, jacket = !!JACKETS[o];
+  const SUIT = { blazer: '#22406E', grey: '#7C858F', navy: '#1C2C4C', three: '#3A3F48', boss: '#16181D' }[o];
+  const shirt = o === 'shirttie' ? '#BFD8F0' : '#F7F9FB';
+  const tie = o === 'boss' ? '#D4A537' : TIES[m.tie] || TIES[0];
+  const hasTie = o === 'shirttie' || o === 'grey' || o === 'navy' || o === 'three' || o === 'boss';
+  const T = 'M22 262 C24 204 44 178 76 167 Q100 160 124 167 C156 178 176 204 178 262 Z';
+  let s = `<defs>
+    <linearGradient id="${id}sh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+    <radialGradient id="${id}side" cx=".5" cy=".35" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></radialGradient>
+    <radialGradient id="${id}face" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".12"/></radialGradient>
+    <pattern id="${id}pin" width="7" height="10" patternUnits="userSpaceOnUse"><path d="M3.5 0V10" stroke="#fff" stroke-opacity=".16" stroke-width=".8"/></pattern>
+    <linearGradient id="${id}gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF0B3"/><stop offset=".45" stop-color="#E2B33E"/><stop offset="1" stop-color="#A97A12"/></linearGradient>
+    <clipPath id="${id}t"><path d="${T}"/></clipPath></defs>`;
+  // hair behind the head
+  if (m.hair === 'long') s += `<path d="M62 92 C58 140 64 168 74 176 L126 176 C136 168 142 140 138 92 Z" fill="${hcD}"/>`;
+  if (m.hair === 'bun') s += `<circle cx="100" cy="46" r="15" fill="${hc}"/><circle cx="96" cy="42" r="5" fill="#fff" opacity=".12"/>`;
+  // neck
+  s += `<path d="M88 116 V172 H112 V116 Z" fill="${skin}"/><path d="M88 128 Q100 140 112 128 V136 Q100 146 88 136 Z" fill="${skinD}" opacity=".55"/>`;
+  // body (raised a little, for a shorter neck)
+  s += '<g transform="translate(0 -9)">';
+  const body = o === 'qzip' ? '#5E6E80' : jacket ? SUIT : shirt;
+  s += `<path d="${T}" fill="${body}"/>`;
+  if (o === 'boss') s += `<path d="${T}" fill="url(#${id}pin)"/>`;
+  if (o === 'white' || o === 'shirttie') {
+    s += `<g clip-path="url(#${id}t)"><path d="M100 168 V262" stroke="${shade(shirt, -.12)}" stroke-width="1.2"/>${[192, 214, 236].map(y => `<circle cx="100" cy="${y}" r="1.9" fill="${shade(shirt, -.2)}"/>`).join('')}
+      <path d="M126 197 h18 v12 q-9 4 -18 0 z" fill="none" stroke="${shade(shirt, -.14)}" stroke-width="1.2"/></g>`;
+    if (o === 'white') s += `<path d="M92 162 L100 177 L108 162 Z" fill="${skin}"/><path d="M40 238 Q46 250 44 262 M160 238 Q154 250 156 262" stroke="${shade(shirt, -.14)}" stroke-width="1.4" fill="none"/>`;
+    s += collar(shirt) + (o === 'shirttie' ? tieSVG(tie) : '');
+  } else if (o === 'qzip') {
+    s += `<path d="M100 166 V214" stroke="#C9D3DD" stroke-width="2"/><rect x="97.5" y="184" width="5" height="10" rx="1.6" fill="#DDE4EA"/>
+      <path d="M80 152 Q100 160 120 152 L122 168 Q100 176 78 168 Z" fill="#4E5D6E"/><path d="M100 158 V175" stroke="#C9D3DD" stroke-width="2"/>
+      <path d="M30 236 Q100 246 170 236" stroke="#4E5D6E" stroke-width="3" fill="none" opacity=".5"/>`;
+  } else {
+    const three = o === 'three';
+    s += `<path d="M85 160 L100 220 L115 160 Z" fill="${three ? shade(SUIT, .14) : shirt}"/>`;
+    if (three) s += `<path d="M91 160 L100 196 L109 160 Z" fill="${shirt}"/>${[202, 212].map(y => `<circle cx="100" cy="${y}" r="1.6" fill="${shade(SUIT, -.3)}"/>`).join('')}`;
+    else if (!hasTie) s += `<path d="M92 162 L100 178 L108 162 Z" fill="${skin}"/>`;
+    s += collar(shirt) + (hasTie ? tieSVG(tie, o === 'boss') : '');
+    const lap = shade(SUIT, -.22), L = 'M86 158 L100 222 L88 206 L73 182 L82 177 L78 166 Z', R = 'M114 158 L100 222 L112 206 L127 182 L118 177 L122 166 Z';
+    s += `<path d="${L}" fill="${lap}"/><path d="${R}" fill="${lap}"/>${o === 'boss' ? `<path d="${L}" fill="url(#${id}pin)"/><path d="${R}" fill="url(#${id}pin)"/>` : ''}
+      <path d="M86 158 L100 222 M114 158 L100 222" stroke="${shade(SUIT, -.4)}" stroke-width="1"/>
+      <circle cx="100" cy="232" r="2.6" fill="${shade(SUIT, -.35)}"/><circle cx="100" cy="250" r="2.6" fill="${shade(SUIT, -.35)}"/>
+      <path d="M120 200 L142 197" stroke="${shade(SUIT, -.35)}" stroke-width="1.4"/>`;
+    if (o === 'boss' || o === 'three') s += `<path d="M122 200 L126 191 L130 199 L134 190 L139 198 Z" fill="${o === 'boss' ? `url(#${id}gold)` : '#F4F6F8'}"/>`;
+  }
+  s += `<path d="${T}" fill="url(#${id}sh)"/><path d="${T}" fill="url(#${id}side)"/>`;
+  // things he wears
+  if (m.on.lanyard && unlockedBy(EXTRAS[0])) s += `<path d="M90 162 Q80 186 72 204 M110 162 Q96 186 78 204" stroke="#1A96E4" stroke-width="3" fill="none"/><rect x="64" y="203" width="20" height="26" rx="3" fill="#fff" stroke="#BFD3E2"/><rect x="64" y="203" width="20" height="7" rx="3" fill="#1A96E4"/><circle cx="74" cy="217" r="3.6" fill="#D6E3EC"/><rect x="68" y="223" width="12" height="2" rx="1" fill="#C7D5E0"/>`;
+  if (m.on.pen && unlockedBy(EXTRAS[1])) s += `<rect x="136" y="182" width="3.4" height="18" rx="1.5" fill="#1C2C4C"/><rect x="136" y="182" width="3.4" height="5" rx="1.5" fill="#D4A537"/>`;
+  if (m.on.pin && jacket && unlockedBy(EXTRAS[2])) s += `<circle cx="121" cy="184" r="3.6" fill="url(#${id}gold)"/><circle cx="120" cy="183" r="1.1" fill="#fff" opacity=".8"/>`;
+  s += '</g>';
+  // head
+  s += `<ellipse cx="68" cy="97" rx="6.5" ry="9.5" fill="${skin}"/><ellipse cx="132" cy="97" rx="6.5" ry="9.5" fill="${skin}"/>
+    <ellipse cx="68" cy="97" rx="3" ry="5" fill="${skinD}" opacity=".5"/><ellipse cx="132" cy="97" rx="3" ry="5" fill="${skinD}" opacity=".5"/>
+    <ellipse cx="100" cy="92" rx="32" ry="38" fill="${skin}"/><ellipse cx="100" cy="92" rx="32" ry="38" fill="url(#${id}face)"/>
+    <ellipse cx="84" cy="106" rx="6" ry="3.5" fill="#F08A8A" opacity=".18"/><ellipse cx="116" cy="106" rx="6" ry="3.5" fill="#F08A8A" opacity=".18"/>
+    <path d="M80 82 Q87 78 94 81 M106 81 Q113 78 120 82" stroke="${m.hair === 'bald' ? skinD : hcD}" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <ellipse cx="87.5" cy="93" rx="3.6" ry="4.2" fill="#2A211C"/><ellipse cx="112.5" cy="93" rx="3.6" ry="4.2" fill="#2A211C"/>
+    <circle cx="88.8" cy="91.5" r="1.3" fill="#fff"/><circle cx="113.8" cy="91.5" r="1.3" fill="#fff"/>
+    <path d="M100 96 Q96.5 106 101 107.5" stroke="${skinD}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M90 114 Q100 122 110 114" stroke="#8A4A3C" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  // facial hair
+  if (m.beard === 'stubble') s += `<path d="M70 100 C72 128 86 132 100 132 C114 132 128 128 130 100 C126 116 116 122 100 122 C84 122 74 116 70 100 Z" fill="${hc}" opacity=".22"/>`;
+  if (m.beard === 'tash' || m.beard === 'beard') s += `<path d="M88 112 Q100 106 112 112 Q106 114 100 112 Q94 114 88 112 Z" fill="${hc}"/>`;
+  if (m.beard === 'beard') s += `<path d="M69 98 C70 128 84 134 100 134 C116 134 130 128 131 98 C127 112 120 118 113 117 Q100 128 87 117 C80 118 73 112 69 98 Z" fill="${hc}"/><path d="M92 117 Q100 121 108 117" stroke="#8A4A3C" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+  // hair on top
+  const H = {
+    short: `<path d="M67 90 C64 58 84 46 103 47 C124 48 138 62 133 90 C130 76 122 68 108 66 C96 70 80 70 67 90 Z"/>`,
+    side: `<path d="M67 92 C62 56 86 44 106 47 C128 50 140 66 133 92 C131 74 124 66 114 62 C104 72 84 72 67 92 Z"/><path d="M114 62 C110 56 100 52 90 54" stroke="${hcD}" stroke-width="1.6" fill="none"/>`,
+    buzz: `<path d="M68 88 C66 60 84 52 100 52 C118 52 134 60 132 88 C126 70 114 64 100 64 C86 64 74 70 68 88 Z" opacity=".75"/>`,
+    curly: `<g>${[[72, 76, 9], [80, 64, 10], [92, 56, 11], [106, 55, 11], [119, 62, 10], [128, 74, 9], [70, 88, 7], [130, 88, 7], [100, 64, 10]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>`,
+    quiff: `<path d="M67 92 C62 62 78 50 92 46 C100 34 120 34 128 44 C122 44 118 46 116 50 C130 56 138 70 133 92 C130 78 122 70 110 68 C94 72 80 72 67 92 Z"/>`,
+    long: `<path d="M65 108 C58 60 82 46 102 47 C124 48 144 62 135 108 C132 86 126 72 112 66 C100 74 82 76 72 84 C68 92 67 100 65 108 Z"/>`,
+    bun: `<path d="M68 90 C64 60 84 50 102 50 C122 50 138 62 132 90 C128 74 118 66 100 66 C84 66 72 74 68 90 Z"/>`,
+    bald: '',
+  }[m.hair] || '';
+  s += `<g fill="${hc}">${H}</g>`;
+  if (H && m.hair !== 'buzz') s += `<path d="M82 58 Q96 50 112 54" stroke="#fff" stroke-opacity=".22" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  // glasses
+  if (m.glasses === 'round') s += `<g fill="#fff" fill-opacity=".14" stroke="#2A2A2A" stroke-width="2.2"><circle cx="87.5" cy="93" r="9.5"/><circle cx="112.5" cy="93" r="9.5"/></g><path d="M97 93 Q100 90 103 93 M78 92 L69 90 M122 92 L131 90" stroke="#2A2A2A" stroke-width="2" fill="none"/>`;
+  if (m.glasses === 'square') s += `<g fill="#fff" fill-opacity=".14" stroke="#1C2C4C" stroke-width="2.4"><rect x="77" y="85" width="21" height="15" rx="3.5"/><rect x="102" y="85" width="21" height="15" rx="3.5"/></g><path d="M98 91 H102 M77 90 L69 89 M123 90 L131 89" stroke="#1C2C4C" stroke-width="2.2"/>`;
+  // what he holds
+  const hold = m.hold && EXTRAS.find(x => x.id === m.hold && unlockedBy(x)) ? m.hold : '';
+  if (!opt.preview) s += holdSVG(hold, id);
+  function collar(c) { return `<path d="M100 170 L86 154 L80 166 L93 182 Z" fill="${c}" stroke="${shade(c, -.16)}" stroke-width="1"/><path d="M100 170 L114 154 L120 166 L107 182 Z" fill="${c}" stroke="${shade(c, -.16)}" stroke-width="1"/>`; }
+  function tieSVG(c, shine) { return `<path d="M95 168 H105 L103.5 179 H96.5 Z" fill="${shade(c, -.12)}"/><path d="M96.5 179 H103.5 L108 226 L100 236 L92 226 Z" fill="${c}"/>${shine ? `<path d="M97 182 L99 226" stroke="#FFF3C4" stroke-opacity=".6" stroke-width="1.6"/>` : `<path d="M98 184 L102 222" stroke="#fff" stroke-opacity=".14" stroke-width="2"/>`}`; }
+  if (opt.head) return `<svg class="char-head" viewBox="56 40 88 88" aria-hidden="true">${s}</svg>`;
+  if (opt.preview) return `<svg class="char-prev" viewBox="20 36 160 210" aria-hidden="true">${s}</svg>`;
+  if (!opt.orb) return `<svg class="char-art" viewBox="0 0 200 262" role="img" aria-label="Your character">${s}</svg>`;
+  return `<svg class="char-art orb" viewBox="-20 -16 240 240" role="img" aria-label="Your character, wearing the ${esc((OUTFITS.find(x => x.id === o) || OUTFITS[0]).name.toLowerCase())}"><defs>
+    <radialGradient id="${id}ob" cx=".5" cy=".3" r=".75"><stop offset="0" stop-color="#F2FBFF"/><stop offset=".7" stop-color="#BFE6FA"/><stop offset="1" stop-color="#7CC6F0"/></radialGradient>
+    <linearGradient id="${id}og" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <clipPath id="${id}oc"><circle cx="100" cy="104" r="112"/></clipPath></defs>
+    <circle cx="100" cy="104" r="112" fill="url(#${id}ob)"/>
+    <g clip-path="url(#${id}oc)"><ellipse cx="100" cy="250" rx="140" ry="40" fill="#8ED36A" opacity=".55"/><g transform="translate(20 30) scale(.8)">${s}</g></g>
+    <circle cx="100" cy="104" r="111" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2.5"/>
+    <ellipse cx="72" cy="30" rx="58" ry="26" transform="rotate(-24 72 30)" fill="url(#${id}og)" opacity=".75"/>
+    <circle cx="176" cy="150" r="6" fill="#fff" opacity=".6"/></svg>`;
+}
+function holdSVG(h, id) {
+  if (h === 'mug') return `<g transform="translate(150 200)"><path d="M0 0 H26 V30 Q26 38 18 38 H8 Q0 38 0 30 Z" fill="#fff" stroke="#C7D7E3"/><path d="M26 8 Q36 8 36 17 Q36 26 26 26" stroke="#C7D7E3" stroke-width="4" fill="none"/><rect x="0" y="10" width="26" height="9" fill="#1A96E4"/><path d="M8 -6 Q4 -12 8 -18 M16 -6 Q12 -12 16 -18" stroke="#fff" stroke-opacity=".8" stroke-width="2" fill="none" stroke-linecap="round"/></g>`;
+  if (h === 'calc') return `<g transform="translate(146 194) rotate(8)"><rect width="34" height="46" rx="5" fill="#2E3A48"/><rect x="5" y="5" width="24" height="10" rx="2" fill="#B9E5A0"/>${[0, 1, 2].map(r => [0, 1, 2].map(c => `<rect x="${5 + c * 8.5}" y="${19 + r * 8.5}" width="6" height="6" rx="1.5" fill="${r === 2 && c === 2 ? '#F28C28' : '#E2E8EE'}"/>`).join('')).join('')}</g>`;
+  if (h === 'laptop') return `<g transform="translate(118 206)"><path d="M6 0 H70 Q74 0 74 4 V40 H2 V4 Q2 0 6 0 Z" fill="#C9D3DC"/><rect x="7" y="5" width="62" height="31" rx="2" fill="#2E8FD8"/><path d="M7 5 H69 L40 36 H7 Z" fill="#fff" opacity=".18"/><path d="M-6 40 H82 L76 48 H0 Z" fill="#AEBAC5"/><text x="38" y="25" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="sans-serif">A=L+E</text></g>`;
+  if (h === 'case') return `<g transform="translate(140 206)"><path d="M14 0 H34 Q38 0 38 4 V8 H33 V5 H15 V8 H10 V4 Q10 0 14 0 Z" fill="#5A3A22"/><rect x="0" y="8" width="48" height="36" rx="5" fill="#7A4E2C"/><rect x="0" y="8" width="48" height="12" rx="5" fill="#8C5C35"/><rect x="21" y="18" width="6" height="7" rx="1.5" fill="#E2B33E"/></g>`;
+  if (h === 'trophy') return `<g transform="translate(146 186)"><path d="M6 0 H34 V14 Q34 30 20 32 Q6 30 6 14 Z" fill="url(#${id}gold)"/><path d="M6 4 Q-4 4 -2 12 Q0 20 8 20 M34 4 Q44 4 42 12 Q40 20 32 20" stroke="#D4A537" stroke-width="3" fill="none"/><rect x="16" y="32" width="8" height="8" fill="#C99A2E"/><rect x="8" y="40" width="24" height="8" rx="2" fill="#5A3A22"/><path d="M12 4 Q14 16 18 22" stroke="#fff" stroke-opacity=".6" stroke-width="2" fill="none"/></g>`;
+  return '';
+}
+function wardrobe(tab = 'outfits') {
+  const sh = sheet(`<div class="label">Your character</div><h3>Wardrobe</h3><div class="wd-prev" id="wdp"></div><div class="seg wd-tabs" id="wdt"></div><div id="wd"></div>`);
+  const draw = () => {
+    const m = ME(), lvl = levelOf(S.xp);
+    $('#wdp', sh).innerHTML = charSVG({ orb: true });
+    $('#wdt', sh).innerHTML = [['outfits', 'Outfits'], ['extras', 'Extras'], ['looks', 'Looks']].map(([k, l]) => `<button class="tog" aria-pressed="${tab === k}" data-wt="${k}">${l}</button>`).join('');
+    let h = '';
+    if (tab === 'outfits') h = `<div class="wd-grid">${OUTFITS.map(x => { const ok = unlockedBy(x); return `<button class="wd-item ${m.outfit === x.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-wo="${x.id}" ${ok ? '' : 'aria-disabled="true"'}>${charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } })}<b>${esc(x.name)}</b><small>${ok ? (m.outfit === x.id ? 'Wearing' : esc(x.desc)) : `${ICON.lock}Level ${x.lvl} · ${esc(titleAt(x.lvl))}`}</small></button>`; }).join('')}</div>`;
+    else if (tab === 'extras') {
+      const row = x => { const ok = unlockedBy(x), on = x.kind === 'on' ? !!m.on[x.id] : m.hold === x.id; return `<button class="task ${ok ? '' : 'locked'}" data-wx="${x.id}" ${ok ? '' : 'disabled'} aria-pressed="${ok && on}"><span class="check">${ok ? ICON.check : ICON.lock}</span><span class="row-main"><span class="row-title">${esc(x.name)}</span><small>${ok ? (x.jacket && !JACKETS[m.outfit] ? 'Shows on a jacket' : on ? 'On' : 'Tap to add') : needText(x)}</small></span></button>`; };
+      h = `<div class="label sheet-sub">He wears</div><div class="tasks">${EXTRAS.filter(x => x.kind === 'on').map(row).join('')}</div><div class="label sheet-sub">He holds one thing</div><div class="tasks">${EXTRAS.filter(x => x.kind === 'hold').map(row).join('')}</div>`;
+    } else {
+      const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="sw ${cur === i ? 'on' : ''}" style="--c:${Array.isArray(c) ? c[0] : c}" data-wl="${key}" data-v="${i}" aria-label="${Array.isArray(c) ? c[1] : 'Colour ' + (i + 1)}"></button>`).join('')}</div>`;
+      const seg = (list, key, cur) => `<div class="seg">${list.map(([v, l]) => `<button class="tog" aria-pressed="${cur === v}" data-wl="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
+      h = `<div class="wd-looks"><div class="label">Skin</div>${sw(SKINS, 'skin', m.skin)}<div class="label">Hair</div>${seg(HAIRS, 'hair', m.hair)}<div class="label">Hair colour</div>${sw(HAIR_COLS, 'hairCol', m.hairCol)}
+        <div class="label">Facial hair</div>${seg(BEARDS, 'beard', m.beard)}<div class="label">Glasses</div>${seg(GLASSES, 'glasses', m.glasses)}<div class="label">Tie colour</div>${sw(TIES, 'tie', m.tie)}<p class="hint">The boss suit always comes with its gold tie.</p></div>`;
+    }
+    $('#wd', sh).innerHTML = h;
+    sh.querySelectorAll('[data-wt]').forEach(b => b.onclick = () => { tab = b.dataset.wt; draw(); });
+    sh.querySelectorAll('[data-wo]').forEach(b => b.onclick = () => { const x = OUTFITS.find(o => o.id === b.dataset.wo); if (!unlockedBy(x)) return toast(`Unlocks at level ${x.lvl}. You are level ${lvl}.`); S.me.outfit = x.id; save(); sfx.tap(); draw(); });
+    sh.querySelectorAll('[data-wx]').forEach(b => b.onclick = () => { const x = EXTRAS.find(o => o.id === b.dataset.wx); if (x.kind === 'on') S.me.on = Object.assign({}, S.me.on, { [x.id]: !S.me.on[x.id] }); else S.me.hold = S.me.hold === x.id ? '' : x.id; save(); sfx.tap(); draw(); });
+    sh.querySelectorAll('[data-wl]').forEach(b => b.onclick = () => { const k = b.dataset.wl, v = b.dataset.v; S.me[k] = /^\d+$/.test(v) ? +v : v; save(); sfx.tap(); draw(); });
+  };
+  draw();
+  // the page behind shows the new look when the wardrobe closes
+  new MutationObserver((_, ob) => { if (!document.body.contains(sh)) { ob.disconnect(); if (!LESSON) render(); } }).observe(document.body, { childList: true });
+}
+const titleAt = lvl => titleOf(lvl)[1];
+function nextUnlock() {
+  const lvl = levelOf(S.xp);
+  return [...OUTFITS, ...EXTRAS].filter(x => !x.ach && x.lvl > lvl).sort((a, b) => a.lvl - b.lvl)[0];
+}
+function charCard() {
+  const n = nextUnlock(), m = ME(), lvl = levelOf(S.xp), wearing = OUTFITS.find(x => x.id === m.outfit) || OUTFITS[0];
+  const got = [...OUTFITS, ...EXTRAS].filter(unlockedBy).length, all = OUTFITS.length + EXTRAS.length;
+  const a = levelStart(lvl), b = n ? levelStart(n.lvl) : 1;
+  return `<section class="card stack"><div class="list-head"><h3>Wardrobe</h3><span class="pill p-lime">${got} of ${all} unlocked</span></div>
+    <div class="inner"><span class="wd-mini">${charSVG({ preview: true })}</span><span class="cap">Wearing the <b>${esc(wearing.name.toLowerCase().replace(/^the /, ''))}</b>.<br>${n ? `Next: <b>${esc(n.name.toLowerCase())}</b> at level ${n.lvl}, ${(levelStart(n.lvl) - S.xp).toLocaleString('en')} XP away.` : 'Everything is unlocked. Big boss.'}</span></div>
+    ${n ? `<div class="track"><i style="width:${Math.max(2, Math.min(100, 100 * (S.xp - a) / Math.max(1, b - a)))}%"></i></div>` : ''}
+    <button class="btn wide" data-wardrobe>Open the wardrobe${ICON.chevR}</button></section>`;
 }
 
 /* ================= Balsam’s Garden (from Iqraʾ) ================= */
