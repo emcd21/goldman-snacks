@@ -1174,3 +1174,12 @@ canvas.confetti{z-index:80}
 }
 .feedback .msg p b{display:inline;font-size:inherit;letter-spacing:0;margin:0;color:var(--tx);font-weight:600}
 .topbar.sky .brand{text-shadow:0 1px 2px rgba(0,50,110,.65),0 0 14px rgba(0,60,130,.55)}
+/* improvements */
+.task .tile.dark .code{font-size:11px;letter-spacing:-.03em}
+.hint .risk{display:inline-flex;align-items:center;gap:4px;color:#C2410C;font-weight:600}
+.hint .risk svg{width:14px;height:14px}
+.install{background:var(--glow),linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.62))}
+.x.sm{width:32px;height:32px}.x.sm svg{width:16px;height:16px}
+.update-bar{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:95;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;border-radius:16px;font-size:14px;font-weight:500;color:var(--tx);background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(234,246,254,.95));border:1px solid #fff;box-shadow:0 14px 34px -12px rgba(10,60,110,.5);max-width:calc(100% - 32px);animation:rise .25s ease-out}
+.update-bar .btn{height:36px;font-size:14px;padding:0 14px}
+@media (min-width:1024px){.update-bar{bottom:24px}}

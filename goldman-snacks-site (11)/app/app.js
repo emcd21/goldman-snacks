@@ -149,6 +149,7 @@ function tone(freqs, dur = 0.12, type = 'sine', gap = 0.09, vol = 0.12) {
     });
   } catch (e) { }
 }
+const buzz = p => { try { if (S.settings.sound && navigator.vibrate) navigator.vibrate(p); } catch (e) { } };
 const sfx = { right: () => tone([660, 880], 0.14, 'triangle'), wrong: () => tone([220, 180], 0.18, 'sine', 0.1, 0.1), done: () => tone([523, 659, 784, 1047], 0.22, 'triangle', 0.11), tap: () => tone([520], 0.05, 'sine', 0, 0.05) };
 
 /* ---------- question builders ---------- */
@@ -286,7 +287,7 @@ function startLesson(opts) {
   LESSON = Object.assign({ steps, i: 0, ok: 0, answered: 0, mistakes: 0, combo: 0, maxCombo: 0, xp: 0, first: 0, firstOk: 0 }, opts);
   document.body.style.overflow = 'hidden';
   const el = document.createElement('div'); el.className = 'lesson'; el.id = 'lesson';
-  el.innerHTML = `<div class="lesson-top"><button class="x" id="quit" aria-label="Leave lesson">${ICON.x}</button><div class="bar"><i id="pbar"></i></div><div class="combo" id="combo"></div><div class="timer" id="timer" hidden></div></div><div class="stage" id="stage"></div><div id="fb"></div>`;
+  el.innerHTML = `<div class="lesson-top"><button class="x" id="quit" aria-label="Leave lesson">${ICON.x}</button><div class="bar"><i id="pbar"></i></div><div class="combo" id="combo"></div><div class="timer" id="timer" hidden></div></div><div class="stage" id="stage"></div><div id="fb" role="status" aria-live="polite"></div>`;
   document.body.appendChild(el);
   $('#quit').onclick = confirmQuit;
   if (LESSON.mins) {
@@ -369,14 +370,15 @@ function renderSite(st, stage) {
   stage.innerHTML = `<div class="qhead"><span class="pill p-dark">${esc(kind)}</span><span>${esc(N[st.tid].title)}</span></div><div class="gsx qp">${q.prompt}</div>`;
   const box = document.createElement('div'); box.className = 'gsx widget'; box.append(w.el); stage.append(box);
   footer(q.type === 'written' ? 'Show the model answer' : 'Check', () => {
+    // Check nothing until there is an answer, so an empty form is not marked all red.
+    const empty = !box.querySelector('textarea') && ![...box.querySelectorAll('input,select,textarea')].some(x => x.type === 'checkbox' || x.type === 'radio' ? x.checked : x.value.trim()) && !box.querySelector('[aria-pressed="true"]');
+    if (empty) return toast('Fill in your answer first');
     const r = w.check();
     if (r.self) {
       box.querySelector('textarea') && (box.querySelector('textarea').readOnly = true);
       const model = box.querySelector('.model'); if (model) model.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return gradeFooter(g => answer(g === 'good', st, '', true, { self: true }), 'Tick the points you covered, then be honest with yourself.', [['again', 'I missed some'], ['good', 'I covered them']]);
     }
-    const empty = ![...box.querySelectorAll('input,select,textarea')].some(x => x.type === 'checkbox' || x.type === 'radio' ? x.checked : x.value.trim()) && !box.querySelector('[aria-pressed="true"]');
-    if (empty && r.n === 0) return toast('Fill in your answer first');
     const ok = r.ok ?? r.n === r.of;
     box.querySelectorAll('input,select,button,textarea').forEach(x => { if (x.type !== 'checkbox') x.disabled = true; });
     answer(ok, st, ok ? '' : `${r.n} of ${r.of} right. Red marks need another look.${r.msg ? ' ' + r.msg : ''}`, false, { reveal: ok ? null : () => { w.reveal(); box.querySelectorAll('input,select,button').forEach(x => x.disabled = true); } });
@@ -394,9 +396,9 @@ function answer(ok, st, detail = '', raw = false, more = {}) {
   if (!base.retried) { LESSON.first++; if (ok) LESSON.firstOk++; }
   if (ok) {
     LESSON.ok++; LESSON.combo++; LESSON.maxCombo = Math.max(LESSON.maxCombo, LESSON.combo);
-    gain(10 + Math.min(10, Math.max(0, LESSON.combo - 2) * 2)); sfx.right();
+    gain(10 + Math.min(10, Math.max(0, LESSON.combo - 2) * 2)); sfx.right(); buzz(12);
   } else {
-    LESSON.mistakes++; LESSON.combo = 0; sfx.wrong();
+    LESSON.mistakes++; LESSON.combo = 0; sfx.wrong(); buzz([30, 50, 30]);
     if (!base.retried && base.type !== 'match' && !LESSON.noRetry) {
       if (base.type === 'site') LESSON.steps.push({ type: 'site', tid: base.tid, pi: base.pi, key: base.key, retried: true });
       else { const o = shuffle(base.opts); LESSON.steps.push(Object.assign({}, base, { retried: true, opts: o, a: o.indexOf(base.opts[base.a]) })); }
@@ -503,7 +505,13 @@ function sheet(html) {
   document.body.appendChild(s);
   return s;
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.sheet').forEach(s => s.remove()); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { document.querySelectorAll('.sheet').forEach(s => s.remove()); return; }
+  if (!LESSON || document.querySelector('.sheet,.modal') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (/^[1-9]$/.test(e.key)) { const o = [...document.querySelectorAll('#stage .opts .opt')][+e.key - 1]; if (o) { e.preventDefault(); o.click(); } }
+});
 function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const c = document.createElement('canvas'); c.className = 'confetti'; document.body.appendChild(c);
@@ -531,11 +539,12 @@ function topbar() {
   return `<div class="topbar-in"><div class="brand"><span class="logo">${ICON.ledger}</span><span class="bname">Goldman Snacks</span></div>
     <div class="stats"><span class="pill p-white ${st ? '' : 'cold'}" title="Day streak">${ICON.flame}<span class="num">${st}</span></span><span class="pill p-lime" title="Total XP">${ICON.bolt}<span class="num">${S.xp}</span></span><span class="pill p-grey" title="Level">Lv ${lvl}</span></div></div>`;
 }
+const atRisk = () => liveStreak() > 0 && S.last !== dayKey();
 function goalCard(cls = '') {
   const today = S.daily[dayKey()] || 0, pct = Math.min(100, Math.round(100 * today / S.goal));
   return `<section class="card stack ${cls}"><div class="split"><span>Daily goal</span><span class="num">${today} / ${S.goal} XP</span></div>
     <div class="prog"><b class="pct">${pct}%</b><div class="track"><i style="width:${pct}%"></i></div></div>
-    <p class="hint">${today >= S.goal ? 'Goal reached. Well done.' : `${S.goal - today} XP to go. One lesson keeps your streak alive.`}</p></section>`;
+    <p class="hint">${today >= S.goal ? 'Goal reached. Well done.' : atRisk() ? `<b class="risk">${ICON.flame}Your ${liveStreak()}-day streak ends at midnight.</b> One lesson keeps it alive.` : `${S.goal - today} XP to go. One lesson keeps your streak alive.`}</p></section>`;
 }
 // Each main tab opens on a meadow: the page's heading on the sky, and on the grass a line about its work.
 const SCENE_LAND = {
@@ -567,6 +576,17 @@ function sidePanel() {
     ${S.exam.started ? examMini() : ''}
     ${teacher(NOTES.welcome, 'Remember')}`;
 }
+// Install: Android and desktop Chrome offer a prompt we can trigger; on an iPhone it is Share, then Add to Home Screen.
+let INSTALL = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTALL = e; if (TAB === 'learn' && !LESSON) render(); });
+const standalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function installCard() {
+  if (standalone() || S.settings.noInstall || !S.stats.lessons || !(INSTALL || isIOS())) return '';
+  return `<section class="card stack install"><div class="list-head"><h3>Put the app on your Home Screen</h3><button class="x sm" data-noinstall aria-label="Hide">${ICON.x}</button></div>
+    <p class="hint">${INSTALL ? 'It opens full screen, works offline, and keeps your streak one tap away.' : 'Tap <b>Share</b> at the bottom of Safari, then <b>Add to Home Screen</b>. It opens full screen and works offline.'}</p>
+    ${INSTALL ? '<button class="btn wide" data-install>Install the app</button>' : ''}</section>`;
+}
 function viewLearn() {
   const cur = currentIndex(), cl = PATH[cur], cu = U[cl.unit], done = isComplete(cl);
   const sub = `${cu.title} · Topic ${cu.lessons.indexOf(cl) + 1} of ${cu.lessons.length}`;
@@ -575,7 +595,7 @@ function viewLearn() {
     <h1 class="display">${esc(cl.title)}</h1>
     <p>${esc(N[cl.tid].lede || cu.desc)}</p>
     <div class="scene-cta"><button class="btn lg ink" data-lesson="${cur}">${ICON.play}${done ? 'Practise again' : 'Start lesson'}</button>${due ? `<button class="btn lg white" data-go="review">Review ${due}</button>` : ''}</div>`, SCENE_LAND.learn)
-    + goalCard('only-phone') + (S.exam.started ? examMini('only-phone') : '');
+    + installCard() + goalCard('only-phone') + (S.exam.started ? examMini('only-phone') : '');
   const later = [];
   U.forEach((u, ui) => {
     const first = PATH.findIndex(l => l.unit === ui), locked = !isUnlocked(first);
@@ -614,16 +634,17 @@ const GLOSS = (() => {
 function viewRead() {
   if (READING) return viewReader(READING);
   if (WLIST) return viewWords();
-  const item = (tid) => { const n = N[tid], read = S.readLog[tid]; return `<button class="sitem ${read ? 'read' : ''}" data-read="${tid}"><span class="n code">${esc(codeOf(tid))}</span><span class="s-main"><span class="s-name"><b>${esc(n.title)}</b>${read ? `<span class="tick" title="Read">${ICON.check}</span>` : ''}</span><small>${esc(n.lede)}</small></span></button>`; };
+  const item = (tid) => { const n = N[tid], read = S.readLog[tid]; return `<button class="sitem ${read ? 'read' : ''}" data-read="${tid}" data-find="${esc((n.title + ' ' + codeOf(tid) + ' ' + n.lede + ' ' + n.words.map(w => w[0]).join(' ')).toLowerCase())}"><span class="n code">${esc(codeOf(tid))}</span><span class="s-main"><span class="s-name"><b>${esc(n.title)}</b>${read ? `<span class="tick" title="Read">${ICON.check}</span>` : ''}</span><small>${esc(n.lede)}</small></span></button>`; };
   return `<div class="page">
     ${scene('', `<span class="eyebrow">${PATH.length} topics · ${SHEETS.length} cheat sheets</span><h1 class="display">Read the notes</h1><p>Every topic from Goldman Snacks: the basics, key words, the rules and a worked example.</p>`, SCENE_LAND.read, 22)}
+    <section class="card stack"><label class="wsearch">${ICON.search}<input id="tq" type="search" placeholder="Find a topic, such as leases or IAS 36" autocomplete="off"></label><p class="hint" id="tqn" hidden></p></section>
     <section class="card stack words-card"><div class="list-head"><h3>Every key term</h3><span class="pill p-lime">${GLOSS.length}</span></div>
       <p class="hint">Look up any term and what it means, with an example and the topic it comes from.</p>
       <button class="btn wide" data-words>${ICON.search}Open the glossary</button></section>
-    <section class="card ${MORE.sheets ? 'more-open' : ''}"><div class="list-head"><h3>Cheat sheets</h3><span class="pill p-lime">${SHEETS.length}</span></div>
+    <section class="card sheets-card ${MORE.sheets ? 'more-open' : ''}"><div class="list-head"><h3>Cheat sheets</h3><span class="pill p-lime">${SHEETS.length}</span></div>
       <div class="slist cols">${SHEETS.map((s, i) => `<button class="sitem ${i >= 6 ? 'extra' : ''}" data-sheet="${esc(s.id)}"><span class="n">${ICON.book}</span><span class="s-main"><span class="s-name"><b>${esc(s.title)}</b></span></span></button>`).join('')}</div>
       <div class="foot"><button class="foot-tog" data-more="sheets" data-label="Show all ${SHEETS.length}" aria-expanded="${!!MORE.sheets}">${ICON.chevD}<span>${MORE.sheets ? 'Show less' : `Show all ${SHEETS.length}`}</span></button></div></section>
-    ${U.map(u => `<section class="card"><div class="list-head"><h3>${esc(u.title)}</h3><span class="pill p-dark">${esc(u.tag)}</span></div><div class="slist cols">${u.lessons.map(l => item(l.tid)).join('')}</div></section>`).join('')}</div>`;
+    ${U.map(u => `<section class="card tunit"><div class="list-head"><h3>${esc(u.title)}</h3><span class="pill p-dark">${esc(u.tag)}</span></div><div class="slist cols">${u.lessons.map(l => item(l.tid)).join('')}</div></section>`).join('')}</div>`;
 }
 function viewReader(id) {
   if (id.startsWith('sheet:')) {
@@ -787,6 +808,8 @@ function wireExam(app) {
 }
 
 /* ---------- review and profile ---------- */
+// Topics with at least 4 answers and under 80% right, worst first.
+const weakTopics = () => Object.entries(S.tstats).filter(([t, x]) => N[t] && T[t] && x.a >= 4 && x.c / x.a < .8).sort((a, b) => a[1].c / a[1].a - b[1].c / b[1].a).slice(0, 3).map(([t]) => t);
 function viewReview() {
   const due = dueKeys().length, total = Object.keys(S.srs).filter(fromKeyOk).length, weak = Object.entries(S.srs).filter(([k, v]) => v.b <= 1 && fromKeyOk(k)).length;
   const qp = [['terms', 'Aa', 'Key terms', 'Meanings from the glossary'], ['double', 'Dr Cr', 'Double entry', 'Journals, debits and credits, the trial balance'], ['mixed', 'Mix', 'Mixed questions', 'From the topics you have finished']];
@@ -797,6 +820,7 @@ function viewReview() {
       <div class="srows ruled"><div class="srow"><span>Needs work</span><b>${weak}</b></div><div class="srow"><span>Items learned</span><b>${total}</b></div><div class="srow"><span>Review sessions finished</span><b>${S.stats.reviews}</b></div></div>
       ${total ? `<button class="btn lg wide" data-review>${due ? `Review ${Math.min(12, due)} items` : 'Practise anyway'}${ICON.chevR}</button>` : teacher('Finish a lesson or two and the questions and key words you meet will appear here for review.')}
     </section>
+    ${weakTopics().length ? `<section class="card"><div class="list-head"><h3>Your weakest topics</h3><span class="pill p-red">Practise these</span></div><div class="tasks">${weakTopics().map(t => { const x = S.tstats[t], pc = Math.round(100 * x.c / x.a); return `<button class="task" data-practise="${t}"><span class="tile dark">${CODE(codeOf(t))}</span><span class="row-main"><span class="row-title">${esc(N[t].title)}</span><small>${pc}% right over ${plural(x.a, 'answer')}</small></span>${ICON.chevR}</button>`; }).join('')}</div></section>` : ''}
     <section class="card"><h3>Quick practice</h3><div class="tasks">${qp.map(([k, g, t, d]) => `<button class="task" data-quick="${k}"><span class="tile dark">${CODE(g)}</span><span class="row-main"><span class="row-title">${t}</span><small>${d}</small></span>${ICON.chevR}</button>`).join('')}</div></section></div>`;
 }
 function viewMe() {
@@ -865,6 +889,15 @@ function render() {
     <nav class="tabbar"><div class="tabbar-in">${tabs.map(([k, n, ic]) => `<button class="tab" data-tab="${k}" ${TAB === k ? 'aria-current="page"' : ''}><span class="ti">${ic}</span><span class="tn">${n}</span>${count[k] ? `<span class="badge">${count[k] > 99 ? '99+' : count[k]}</span>` : ''}</button>`).join('')}</div></nav>`;
   liftScene(app); wireCommon(app);
   if (TAB === 'read' && WLIST && !READING) wireWords(app);
+  const tq = $('#tq', app);
+  if (tq) tq.oninput = () => {
+    const q = tq.value.trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);
+    let n = 0;
+    app.querySelectorAll('[data-find]').forEach(b => { const on = words.every(w => b.dataset.find.includes(w)); b.hidden = !on; if (on) n++; });
+    app.querySelectorAll('.tunit').forEach(c => c.hidden = !c.querySelector('[data-find]:not([hidden])'));
+    app.querySelectorAll('.words-card,.sheets-card').forEach(c => c.hidden = !!q);
+    const h = $('#tqn', app); h.hidden = !q; h.textContent = n ? `${plural(n, 'topic')} found` : 'No topic matches that. Try the glossary for single terms.';
+  };
   if (TAB === 'exam') wireExam(app);
 }
 function wireCommon(app) {
@@ -910,6 +943,8 @@ function wireCommon(app) {
     startLesson({ steps });
   });
   wireTerms(app);
+  app.querySelectorAll('[data-noinstall]').forEach(b => b.onclick = () => { S.settings.noInstall = true; save(); render(); });
+  app.querySelectorAll('[data-install]').forEach(b => b.onclick = async () => { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) { } INSTALL = null; render(); });
   app.querySelectorAll('[data-xfer="copy"]').forEach(b => b.onclick = () => {
     const code = progressCode();
     const show = () => modal(`<h3>Your progress code</h3><p>Select all of it and copy it, then paste it into Goldman Snacks on your other device.</p><textarea class="code-box" readonly>${esc(code)}</textarea><div class="row"><button class="btn" data-close>Done</button></div>`, m => { const t = $('.code-box', m); t.focus(); t.select(); });

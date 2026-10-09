@@ -2,7 +2,7 @@
 // and the garden pictures at install, so the installed app works offline (except the tutor).
 // Pages and scripts are served from the cache at once and refreshed in the background, so a change to the
 // site reaches the app on the next launch. Bump VERSION when the list of files changes.
-const VERSION = 'gs-app-2';
+const VERSION = 'gs-app-3';
 const CACHE = 'gs-app-' + VERSION;
 const FILES = [
   './', 'index.html', 'app.css', 'app.js', 'notes.js', 'manifest.webmanifest', '../site.js', '../flashdata.js',

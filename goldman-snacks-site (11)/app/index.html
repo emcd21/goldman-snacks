@@ -23,7 +23,18 @@
 // Installed app: offline cache (sw.js), persistent storage, and the standalone class for the status-bar band.
 (() => {
   if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('standalone');
-  if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
+  // When a new version takes over, offer a refresh rather than reloading in the middle of a lesson.
+  if ('serviceWorker' in navigator) addEventListener('load', () => {
+    const had = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js').catch(() => { });
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!had || document.querySelector('.update-bar')) return;
+      const b = document.createElement('div'); b.className = 'update-bar'; b.setAttribute('role', 'status');
+      b.innerHTML = '<span>A new version of the app is ready.</span><button class="btn" type="button">Refresh</button>';
+      b.querySelector('button').onclick = () => location.reload();
+      document.body.appendChild(b);
+    });
+  });
   const st = navigator.storage;
   if (st && st.persist) (st.persisted ? st.persisted() : Promise.resolve(false)).then(p => p || st.persist()).catch(() => { });
 })();
