@@ -1003,26 +1003,35 @@ const MOUTHS = [['smile', 'Smile'], ['grin', 'Grin'], ['smirk', 'Smirk'], ['smal
 const MARKS = [['none', 'None'], ['freckles', 'Freckles'], ['blush', 'Rosy cheeks'], ['mole', 'Beauty spot']];
 // Outfits, in the order they unlock. lvl is the level that unlocks it.
 const OUTFITS = [
-  { id: 'white', name: 'Plain white shirt', lvl: 1, desc: 'Day one. Sleeves rolled, ready to learn.' },
-  { id: 'qzip', name: 'Quarter-zip', lvl: 1, desc: 'The trainee classic.' },
+  { id: 'white', name: 'Plain white shirt', lvl: 1, desc: 'Day one. Crisp shirt, ready to learn.' },
+  { id: 'qzip', name: 'Knit jumper', lvl: 1, desc: 'The trainee classic.' },
   { id: 'shirttie', name: 'Shirt and tie', lvl: 3, desc: 'Bookkeeper smart.' },
-  { id: 'blazer', name: 'Navy blazer', lvl: 5, desc: 'Client meeting ready.' },
+  { id: 'blazer', name: 'Smart jacket', lvl: 5, desc: 'Jacket, open collar. Client meeting ready.' },
   { id: 'grey', name: 'Grey suit', lvl: 6, desc: 'An accounts assistant’s first suit.' },
-  { id: 'gilet', name: 'The gilet', lvl: 8, desc: 'Fleece vest, blue shirt. The analyst uniform.' },
+  { id: 'gilet', name: 'The gilet', lvl: 8, desc: 'Utility gilet over a shirt. The analyst uniform.' },
   { id: 'navy', name: 'Navy suit', lvl: 10, desc: 'Qualified accountant.' },
-  { id: 'three', name: 'Three-piece suit', lvl: 15, desc: 'Senior, with a waistcoat to prove it.' },
-  { id: 'boss', name: 'The boss suit', lvl: 20, desc: 'Black pinstripe, gold tie. Finance director.' },
+  { id: 'three', name: 'Waistcoat and tie', lvl: 15, desc: 'Senior, with a waistcoat to prove it.' },
+  { id: 'boss', name: 'The boss suit', lvl: 20, desc: 'Black suit, silk tie. Finance director.' },
 ];
 // Legends: a full look (outfit, hair, glasses) plus a signature thing to hold, each unlocked by an achievement.
 // Your skin and face stay your own.
 const LEGENDS = [
-  { id: 'burry', name: 'Michael Burry', from: 'The Big Short', ach: 'notes10', desc: 'Band T-shirt and drumsticks. Read every page, then bet against the market.', look: { hair: 'messy', hairCol: 0, beard: 'none', glasses: 'none' }, hold: 'sticks', quote: 'I may be early, but I’m not wrong.' },
+  { id: 'burry', name: 'Michael Burry', from: 'The Big Short', ach: 'notes10', desc: 'Striped polo, shorts and drumsticks. Read every page, then bet against the market.', look: { hair: 'messy', hairCol: 0, beard: 'none', glasses: 'none' }, hold: 'sticks', quote: 'I may be early, but I’m not wrong.' },
   { id: 'bateman', name: 'Patrick Bateman', from: 'American Psycho', ach: 'perfect', desc: 'A flawless suit and an even more flawless business card.', look: { hair: 'slick', hairCol: 0, beard: 'none', glasses: 'none' }, hold: 'card', quote: 'Look at that subtle off-white colouring.' },
   { id: 'wolf', name: 'Jordan Belfort', from: 'The Wolf of Wall Street', ach: 'combo10', desc: 'Sharp suit, sharper sales pitch.', look: { hair: 'slick', hairCol: 3, beard: 'none', glasses: 'none' }, hold: 'sellpen', quote: 'Sell me this pen.' },
-  { id: 'gekko', name: 'Gordon Gekko', from: 'Wall Street', ach: 'groups', desc: 'Red braces, contrast collar and a brick phone. Takeovers welcome.', look: { hair: 'slick', hairCol: 1, beard: 'none', glasses: 'none' }, hold: 'phone', quote: 'Greed, for lack of a better word, is good.' },
-  { id: 'buffett', name: 'Warren Buffett', from: 'The Oracle of Omaha', ach: 'streak30', desc: 'Big glasses, grey suit and a cherry cola. Patience pays.', look: { hair: 'side', hairCol: 5, beard: 'none', glasses: 'big', brows: 'thick' }, hold: 'cola', quote: 'Be fearful when others are greedy.' },
+  { id: 'gekko', name: 'Gordon Gekko', from: 'Wall Street', ach: 'groups', desc: 'Open-collar blue shirt and a brick phone. Takeovers welcome.', look: { hair: 'slick', hairCol: 1, beard: 'none', glasses: 'none' }, hold: 'phone', quote: 'Greed, for lack of a better word, is good.' },
+  { id: 'buffett', name: 'Warren Buffett', from: 'The Oracle of Omaha', ach: 'streak30', desc: 'Big glasses, tweed jacket and a cherry cola. Patience pays.', look: { hair: 'side', hairCol: 5, beard: 'none', glasses: 'big', brows: 'thick' }, hold: 'cola', quote: 'Be fearful when others are greedy.' },
 ];
 const WEAR = [...OUTFITS, ...LEGENDS];
+// Faces for the 3D character: real, scanned faces. Each also sets the drawing's skin and hair (the fallback without 3D).
+const HEADS = [
+  ['Business_Male_06', { skin: 1, hair: 'short', hairCol: 1, beard: 'none' }], ['Business_Male_02', { skin: 1, hair: 'side', hairCol: 0, beard: 'none' }],
+  ['Business_Male_05', { skin: 4, hair: 'buzz', hairCol: 0, beard: 'stubble' }], ['Business_Male_03', { skin: 0, hair: 'side', hairCol: 1, beard: 'none' }],
+  ['Male_Adult_02', { skin: 0, hair: 'messy', hairCol: 1, beard: 'none' }], ['Male_Adult_07', { skin: 1, hair: 'quiff', hairCol: 1, beard: 'stubble' }],
+  ['Male_Adult_05', { skin: 1, hair: 'short', hairCol: 1, beard: 'beard' }], ['Male_Adult_20', { skin: 1, hair: 'short', hairCol: 2, beard: 'none' }],
+  ['Male_Adult_13', { skin: 0, hair: 'buzz', hairCol: 4, beard: 'none' }], ['Male_Adult_14', { skin: 1, hair: 'buzz', hairCol: 2, beard: 'none' }],
+  ['Business_Male_07', { skin: 0, hair: 'bald', hairCol: 5, beard: 'none' }], ['Business_Male_04', { skin: 2, hair: 'bald', hairCol: 5, beard: 'none' }],
+];
 // Extras: things he wears (on) and one thing he holds (hold). Each unlocks by level, by an achievement, or with a legend (of).
 const EXTRAS = [
   { id: 'lanyard', name: 'Office pass', kind: 'on', lvl: 2 },
@@ -1041,7 +1050,7 @@ const EXTRAS = [
 ];
 const SUITS = { blazer: '#22406E', grey: '#7C858F', navy: '#1C2C4C', three: '#3A3F48', boss: '#16181D', bateman: '#6E685E', wolf: '#252B39', buffett: '#5F656E' };
 const JACKETS = SUITS;
-const meDefault = () => ({ skin: 1, hair: 'short', hairCol: 1, beard: 'none', glasses: 'none', tie: 0, outfit: 'white', on: {}, hold: '', face: 'oval', eyes: 'dot', eyeCol: 0, brows: 'soft', nose: 'curve', mouth: 'smile', marks: 'none' });
+const meDefault = () => ({ head: 'Business_Male_06', skin: 1, hair: 'short', hairCol: 1, beard: 'none', glasses: 'none', tie: 0, outfit: 'white', on: {}, hold: '', face: 'oval', eyes: 'dot', eyeCol: 0, brows: 'soft', nose: 'curve', mouth: 'smile', marks: 'none' });
 const ME = () => (S.me = Object.assign(meDefault(), S.me));
 const achName = id => (ACH.find(a => a[0] === id) || [, id])[1];
 const legendOf = id => LEGENDS.find(l => l.id === id);
@@ -1056,7 +1065,7 @@ const QUIPS = ['Debits on the left, credits on the right.', 'Assets equal liabil
 function charSpec(over) {
   const m = Object.assign({}, ME(), over || {}); const L = legendOf(m.outfit); if (L) Object.assign(m, L.look);
   const o = m.outfit, held = m.hold && EXTRAS.find(x => x.id === m.hold && unlockedBy(x)) ? m.hold : '';
-  return { skin: SKINS[m.skin] || SKINS[1], hair: m.hair, hairCol: (HAIR_COLS[m.hairCol] || HAIR_COLS[1])[0], beard: m.beard, glasses: m.glasses, face: m.face, eyes: m.eyes, eyeCol: (EYE_COLS[m.eyeCol] || EYE_COLS[0])[0], brows: m.brows, nose: m.nose, mouth: m.mouth, marks: m.marks,
+  return { head: m.head, skin: SKINS[m.skin] || SKINS[1], hair: m.hair, hairCol: (HAIR_COLS[m.hairCol] || HAIR_COLS[1])[0], beard: m.beard, glasses: m.glasses, face: m.face, eyes: m.eyes, eyeCol: (EYE_COLS[m.eyeCol] || EYE_COLS[0])[0], brows: m.brows, nose: m.nose, mouth: m.mouth, marks: m.marks,
     outfit: o, tie: { boss: '#D4A537', bateman: '#7B3036', wolf: '#CDBB86', gekko: '#E0B53C', buffett: '#24407A' }[o] || TIES[m.tie] || TIES[0], hold: held,
     on: { lanyard: !!(m.on.lanyard && unlockedBy(EXTRAS[0])), pen: !!(m.on.pen && unlockedBy(EXTRAS[1])), pin: !!(m.on.pin && JACKETS[o] && unlockedBy(EXTRAS[2])) } };
 }
@@ -1307,21 +1316,18 @@ function wardrobe(tab = 'outfits') {
     const m = ME(), lvl = levelOf(S.xp);
     $('#wdp', sh).innerHTML = charSVG({ orb: true });
     if (wave) setTimeout(() => charWave($('#wdp', sh)), 30);
-    $('#wdt', sh).innerHTML = [['outfits', 'Outfits'], ['legends', 'Legends'], ['extras', 'Extras'], ['face', 'Face'], ['looks', 'Hair']].map(([k, l]) => `<button class="tog" aria-pressed="${tab === k}" data-wt="${k}">${l}</button>`).join('');
+    $('#wdt', sh).innerHTML = [['outfits', 'Outfits'], ['legends', 'Legends'], ['extras', 'Extras'], ['face', 'Face']].map(([k, l]) => `<button class="tog" aria-pressed="${tab === k}" data-wt="${k}">${l}</button>`).join('');
     const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="sw ${cur === i ? 'on' : ''}" style="--c:${Array.isArray(c) ? c[0] : c}" data-wl="${key}" data-v="${i}" aria-label="${Array.isArray(c) ? c[1] : 'Colour ' + (i + 1)}"></button>`).join('')}</div>`;
     const seg = (list, key, cur) => `<div class="seg">${list.map(([v, l]) => `<button class="tog" aria-pressed="${cur === v}" data-wl="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
     let h = '';
     if (tab === 'outfits') h = `<div class="wd-grid">${OUTFITS.map(x => { const ok = unlockedBy(x); return `<button class="wd-item ${m.outfit === x.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-wo="${x.id}" ${ok ? '' : 'aria-disabled="true"'}>${charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } })}<b>${esc(x.name)}</b><small>${ok ? (m.outfit === x.id ? 'Wearing' : esc(x.desc)) : `${ICON.lock}Level ${x.lvl} · ${esc(titleAt(x.lvl))}`}</small></button>`; }).join('')}</div>`;
-    else if (tab === 'legends') h = `<p class="hint wd-note">Famous faces of finance, real and on screen. Each comes with his hair, his look and his signature thing to hold. Your skin and face stay yours.</p><div class="wd-grid">${LEGENDS.map(x => { const ok = unlockedBy(x); return `<button class="wd-item legend ${m.outfit === x.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-wo="${x.id}" ${ok ? '' : 'aria-disabled="true"'}>${charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } })}<b>${esc(x.name)}</b><span class="wd-from">${esc(x.from)}</span><small>${ok ? (m.outfit === x.id ? 'Wearing' : esc(x.desc)) : `${ICON.lock}${esc(needText(x))}`}</small></button>`; }).join('')}</div>`;
+    else if (tab === 'legends') h = `<p class="hint wd-note">Famous faces of finance, real and on screen. Each comes with his own face, his look and his signature thing to hold.</p><div class="wd-grid">${LEGENDS.map(x => { const ok = unlockedBy(x); return `<button class="wd-item legend ${m.outfit === x.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-wo="${x.id}" ${ok ? '' : 'aria-disabled="true"'}>${charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } })}<b>${esc(x.name)}</b><span class="wd-from">${esc(x.from)}</span><small>${ok ? (m.outfit === x.id ? 'Wearing' : esc(x.desc)) : `${ICON.lock}${esc(needText(x))}`}</small></button>`; }).join('')}</div>`;
     else if (tab === 'extras') {
       const row = x => { const ok = unlockedBy(x), on = x.kind === 'on' ? !!m.on[x.id] : m.hold === x.id; return `<button class="task ${ok ? '' : 'locked'}" data-wx="${x.id}" ${ok ? '' : 'disabled'} aria-pressed="${ok && on}"><span class="check">${ok ? ICON.check : ICON.lock}</span><span class="row-main"><span class="row-title">${esc(x.name)}</span><small>${ok ? (x.jacket && !JACKETS[m.outfit] ? 'Shows on a jacket' : on ? 'On' : 'Tap to add') : esc(needText(x))}</small></span></button>`; };
       h = `<div class="label sheet-sub">He wears</div><div class="tasks">${EXTRAS.filter(x => x.kind === 'on').map(row).join('')}</div><div class="label sheet-sub">He holds one thing</div><div class="tasks">${EXTRAS.filter(x => x.kind === 'hold').map(row).join('')}</div>`;
-    } else if (tab === 'face') {
-      h = `<div class="wd-looks"><div class="label">Skin</div>${sw(SKINS, 'skin', m.skin)}<div class="label">Face shape</div>${seg(FACES, 'face', m.face)}<div class="label">Eyes</div>${seg(EYES, 'eyes', m.eyes)}<div class="label">Eye colour</div>${sw(EYE_COLS, 'eyeCol', m.eyeCol)}<p class="hint">Eye colour shows with round, almond and wide eyes.</p>
-        <div class="label">Eyebrows</div>${seg(BROWS, 'brows', m.brows)}<div class="label">Nose</div>${seg(NOSES, 'nose', m.nose)}<div class="label">Mouth</div>${seg(MOUTHS, 'mouth', m.mouth)}<div class="label">Freckles and marks</div>${seg(MARKS, 'marks', m.marks)}</div>`;
     } else {
-      h = `<div class="wd-looks"><div class="label">Hair</div>${seg(HAIRS, 'hair', m.hair)}<div class="label">Hair colour</div>${sw(HAIR_COLS, 'hairCol', m.hairCol)}
-        <div class="label">Facial hair</div>${seg(BEARDS, 'beard', m.beard)}<div class="label">Glasses</div>${seg(GLASSES, 'glasses', m.glasses)}<div class="label">Tie colour</div>${sw(TIES, 'tie', m.tie)}<p class="hint">The boss suit and the legends come with their own ties, and legends use their own hair and glasses.</p></div>`;
+      h = `<div class="wd-looks"><div class="label">Choose his face</div><div class="wd-faces">${HEADS.map(([id], i) => `<button class="wd-face ${m.head === id ? 'on' : ''}" data-wl="head" data-v="${id}" aria-label="Face ${i + 1}" aria-pressed="${m.head === id}"><img src="avatars/faces/${id}.webp" alt="" loading="lazy"></button>`).join('')}</div>
+        <div class="label">Glasses</div>${seg(GLASSES, 'glasses', m.glasses)}<p class="hint">Legends keep their own face and glasses.</p></div>`;
     }
     $('#wd', sh).innerHTML = h;
     sh.querySelectorAll('[data-wt]').forEach(b => b.onclick = () => { tab = b.dataset.wt; draw(); });
@@ -1335,7 +1341,7 @@ function wardrobe(tab = 'outfits') {
       save(); sfx.tap(); draw(true);
     });
     sh.querySelectorAll('[data-wx]').forEach(b => b.onclick = () => { const x = EXTRAS.find(o => o.id === b.dataset.wx); if (x.kind === 'on') S.me.on = Object.assign({}, S.me.on, { [x.id]: !S.me.on[x.id] }); else S.me.hold = S.me.hold === x.id ? '' : x.id; save(); sfx.tap(); draw(); });
-    sh.querySelectorAll('[data-wl]').forEach(b => b.onclick = () => { const k = b.dataset.wl, v = b.dataset.v; S.me[k] = /^\d+$/.test(v) ? +v : v; save(); sfx.tap(); draw(); });
+    sh.querySelectorAll('[data-wl]').forEach(b => b.onclick = () => { const k = b.dataset.wl, v = b.dataset.v; S.me[k] = /^\d+$/.test(v) ? +v : v; if (k === 'head') { const hd = HEADS.find(h => h[0] === v); if (hd) Object.assign(S.me, hd[1]); } save(); sfx.tap(); draw(); });
   };
   draw();
   // the page behind shows the new look when the wardrobe closes
