@@ -1064,21 +1064,31 @@ let G3 = null, G3P = null;
 const SHOTS = new Map();
 function load3D() { if (!G3P) G3P = import('./char3d.js').then(m => m.ok() ? (G3 = m) : null).catch(e => { console.warn('3D character unavailable', e); return null; }); return G3P; }
 const shotKey = (view, over) => view + JSON.stringify(charSpec(over));
-function shot3(view, over) { const k = shotKey(view, over); if (!SHOTS.has(k)) SHOTS.set(k, G3.shot(charSpec(over), view, view === 'head' ? 128 : 240, view === 'head' ? 128 : 300)); if (SHOTS.size > 80) SHOTS.delete(SHOTS.keys().next().value); return SHOTS.get(k); }
+// SHOTS holds finished stills (data URLs) by look; PENDING holds the ones being rendered
+const PENDING = new Map();
+function shot3(view, over) {
+  const k = shotKey(view, over);
+  if (SHOTS.has(k)) return Promise.resolve(SHOTS.get(k));
+  if (!PENDING.has(k)) PENDING.set(k, G3.shot(charSpec(over), view, view === 'head' ? 160 : 240, view === 'head' ? 160 : 300).then(u => { SHOTS.set(k, u); PENDING.delete(k); if (SHOTS.size > 80) SHOTS.delete(SHOTS.keys().next().value); return u; }));
+  return PENDING.get(k);
+}
 // swap the drawings under root for 3D: stills for tiles and the top bar (one per frame), the live view for the bubble
 function upgrade3D(root) {
   if (!root.querySelector || !root.querySelector('[data-c3]')) return;
   load3D().then(g => {
     if (!g) return;
     const els = [...root.querySelectorAll('[data-c3]')];
-    els.filter(el => el.dataset.c3 === 'live').forEach(el => { const host = el.parentNode; if (host && el.isConnected) { el.remove(); G3.live(host, charSpec()); } });
-    const still = els.filter(el => el.dataset.c3 !== 'live');
-    const step = () => {
-      const el = still.shift(); if (!el) return;
-      if (el.isConnected) { const over = el.dataset.c3o ? JSON.parse(el.dataset.c3o) : null; const img = new Image(); img.className = (el.getAttribute('class') || '') + ' c3img'; img.alt = ''; img.src = shot3(el.dataset.c3, over); el.replaceWith(img); }
-      requestAnimationFrame(step);
-    };
-    step();
+    els.filter(el => el.dataset.c3 === 'live').forEach(el => { const host = el.parentNode; if (host && el.isConnected) { el.dataset.c3 = 'wait'; G3.live(host, charSpec(), el); } });
+    const still = els.filter(el => el.dataset.c3 === 'head' || el.dataset.c3 === 'tile');
+    still.forEach(el => el.dataset.c3 = 'wait');
+    (async () => {
+      for (const el of still) {
+        if (!el.isConnected) continue;
+        const over = el.dataset.c3o ? JSON.parse(el.dataset.c3o) : null, view = el.classList.contains('char-head') ? 'head' : 'tile';
+        const url = await shot3(view, over); if (!el.isConnected) continue;
+        const img = new Image(); img.className = (el.getAttribute('class') || '') + ' c3img'; img.alt = ''; img.src = url; el.replaceWith(img);
+      }
+    })();
   });
 }
 new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) upgrade3D(n.matches && n.matches('[data-c3]') ? n.parentNode : n); }).observe(document.documentElement, { childList: true, subtree: true });
