@@ -949,7 +949,7 @@ function wireCommon(app) {
   });
   wireTerms(app);
   app.querySelectorAll('[data-wardrobe]').forEach(b => b.onclick = () => wardrobe());
-  app.querySelectorAll('[data-wave]').forEach(b => { b.onclick = () => { charWave(b); sfx.tap(); buzz(8); }; if (!WAVED) { WAVED = true; setTimeout(() => charWave(b, 'Hi! Tap me any time.'), 700); } });
+  app.querySelectorAll('[data-wave]').forEach(b => { b.onclick = () => { if (G3 && G3.consumeDrag()) return; charWave(b); sfx.tap(); buzz(8); }; if (!WAVED) { WAVED = true; setTimeout(() => charWave(b, 'Hi! Tap me any time.'), 700); } });
   app.querySelectorAll('[data-noinstall]').forEach(b => b.onclick = () => { S.settings.noInstall = true; save(); render(); });
   app.querySelectorAll('[data-install]').forEach(b => b.onclick = async () => { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) { } INSTALL = null; render(); });
   app.querySelectorAll('[data-xfer="copy"]').forEach(b => b.onclick = () => {
@@ -1051,7 +1051,39 @@ const unlockedIds = () => new Set([...WEAR, ...EXTRAS].filter(unlockedBy).map(x 
 const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f)); return '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''); };
 const QUIPS = ['Debits on the left, credits on the right.', 'Assets equal liabilities plus equity. Always.', 'One more lesson?', 'Accruals before coffee.', 'Did somebody say reconciliation?', 'Let’s balance some books.', 'Prudence is my middle name.'];
 
+// The 3D character (char3d.js, three.js) replaces the drawings when WebGL is available; the SVG drawings stay as
+// the fallback and as placeholders until it loads. charSpec turns what he wears into plain colours and choices.
+function charSpec(over) {
+  const m = Object.assign({}, ME(), over || {}); const L = legendOf(m.outfit); if (L) Object.assign(m, L.look);
+  const o = m.outfit, held = m.hold && EXTRAS.find(x => x.id === m.hold && unlockedBy(x)) ? m.hold : '';
+  return { skin: SKINS[m.skin] || SKINS[1], hair: m.hair, hairCol: (HAIR_COLS[m.hairCol] || HAIR_COLS[1])[0], beard: m.beard, glasses: m.glasses, face: m.face, eyes: m.eyes, eyeCol: (EYE_COLS[m.eyeCol] || EYE_COLS[0])[0], brows: m.brows, nose: m.nose, mouth: m.mouth, marks: m.marks,
+    outfit: o, tie: { boss: '#D4A537', bateman: '#7B3036', wolf: '#CDBB86', gekko: '#E0B53C', buffett: '#24407A' }[o] || TIES[m.tie] || TIES[0], hold: held,
+    on: { lanyard: !!(m.on.lanyard && unlockedBy(EXTRAS[0])), pen: !!(m.on.pen && unlockedBy(EXTRAS[1])), pin: !!(m.on.pin && JACKETS[o] && unlockedBy(EXTRAS[2])) } };
+}
+let G3 = null, G3P = null;
+const SHOTS = new Map();
+function load3D() { if (!G3P) G3P = import('./char3d.js').then(m => m.ok() ? (G3 = m) : null).catch(e => { console.warn('3D character unavailable', e); return null; }); return G3P; }
+const shotKey = (view, over) => view + JSON.stringify(charSpec(over));
+function shot3(view, over) { const k = shotKey(view, over); if (!SHOTS.has(k)) SHOTS.set(k, G3.shot(charSpec(over), view, view === 'head' ? 128 : 240, view === 'head' ? 128 : 300)); if (SHOTS.size > 80) SHOTS.delete(SHOTS.keys().next().value); return SHOTS.get(k); }
+// swap the drawings under root for 3D: stills for tiles and the top bar (one per frame), the live view for the bubble
+function upgrade3D(root) {
+  if (!root.querySelector || !root.querySelector('[data-c3]')) return;
+  load3D().then(g => {
+    if (!g) return;
+    const els = [...root.querySelectorAll('[data-c3]')];
+    els.filter(el => el.dataset.c3 === 'live').forEach(el => { const host = el.parentNode; if (host && el.isConnected) { el.remove(); G3.live(host, charSpec()); } });
+    const still = els.filter(el => el.dataset.c3 !== 'live');
+    const step = () => {
+      const el = still.shift(); if (!el) return;
+      if (el.isConnected) { const over = el.dataset.c3o ? JSON.parse(el.dataset.c3o) : null; const img = new Image(); img.className = (el.getAttribute('class') || '') + ' c3img'; img.alt = ''; img.src = shot3(el.dataset.c3, over); el.replaceWith(img); }
+      requestAnimationFrame(step);
+    };
+    step();
+  });
+}
+new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) upgrade3D(n.matches && n.matches('[data-c3]') ? n.parentNode : n); }).observe(document.documentElement, { childList: true, subtree: true });
 let CHAR_N = 0, WAVED = false;
+load3D();
 // The character as SVG. opt.orb puts him in a glass bubble; opt.head crops to his head (the top bar);
 // opt.preview draws an outfit in a tile; opt.me overrides what he wears. Orb and head are animated (class live).
 function charSVG(opt = {}) {
@@ -1210,11 +1242,11 @@ function charSVG(opt = {}) {
   function collar(c) { return `<path d="M100 170 L86 154 L80 166 L93 182 Z" fill="${c}" stroke="${shade(c, -.16)}" stroke-width="1"/><path d="M100 170 L114 154 L120 166 L107 182 Z" fill="${c}" stroke="${shade(c, -.16)}" stroke-width="1"/>`; }
   function tieSVG(c, shine, pat) { const blade = 'M96.5 179 H103.5 L108 226 L100 236 L92 226 Z'; return `<path d="M95 168 H105 L103.5 179 H96.5 Z" fill="${shade(c, -.12)}"/><path d="${blade}" fill="${c}"/>${pat ? `<path d="${blade}" fill="url(#${id}dot)"/>` : ''}${shine ? `<path d="M97 182 L99 226" stroke="#FFF3C4" stroke-opacity=".6" stroke-width="1.6"/>` : `<path d="M98 184 L102 222" stroke="#fff" stroke-opacity=".14" stroke-width="2"/>`}`; }
   const delay = `style="--bd:-${(CHAR_N * 1.7 % 5).toFixed(1)}s"`;
-  if (opt.head) return `<svg class="char-head live" ${delay} viewBox="56 40 88 88" aria-hidden="true">${s}</svg>`;
-  if (opt.preview) return `<svg class="char-prev" viewBox="20 36 160 210" aria-hidden="true">${s}</svg>`;
+  if (opt.head) { if (G3 && SHOTS.has(shotKey('head'))) return `<img class="char-head c3img" alt="" src="${SHOTS.get(shotKey('head'))}">`; return `<svg class="char-head live" data-c3="head" ${delay} viewBox="56 40 88 88" aria-hidden="true">${s}</svg>`; }
+  if (opt.preview) { const ov = opt.me ? JSON.stringify(opt.me) : ''; if (G3 && SHOTS.has(shotKey('tile', opt.me))) return `<img class="char-prev c3img" alt="" src="${SHOTS.get(shotKey('tile', opt.me))}">`; return `<svg class="char-prev" data-c3="tile" ${ov ? `data-c3o="${esc(ov)}"` : ''} viewBox="20 36 160 210" aria-hidden="true">${s}</svg>`; }
   const what = L ? `dressed as ${L.name}` : `wearing the ${(OUTFITS.find(x => x.id === o) || OUTFITS[0]).name.toLowerCase().replace(/^the /, '')}`;
   if (!opt.orb) return `<svg class="char-art live" ${delay} viewBox="0 0 200 262" role="img" aria-label="Your character, ${esc(what)}">${s}</svg>`;
-  return `<svg class="char-art orb live" ${delay} viewBox="-20 -16 240 240" role="img" aria-label="Your character, ${esc(what)}"><defs>
+  return `<svg class="char-art orb live" data-c3="live" ${delay} viewBox="-20 -16 240 240" role="img" aria-label="Your character, ${esc(what)}"><defs>
     <radialGradient id="${id}ob" cx=".5" cy=".3" r=".75"><stop offset="0" stop-color="#F2FBFF"/><stop offset=".7" stop-color="#BFE6FA"/><stop offset="1" stop-color="#7CC6F0"/></radialGradient>
     <linearGradient id="${id}og" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <clipPath id="${id}oc"><circle cx="100" cy="104" r="112"/></clipPath></defs>
@@ -1247,9 +1279,10 @@ function holdSVG(h, id, skin, skinD, sleeve, cuff) {
 }
 // He waves: the arm swings up, he smiles, and says something.
 function charWave(el, line) {
-  const svg = el.querySelector('svg.char-art'); if (!svg) return;
-  svg.classList.remove('wave'); void svg.getBoundingClientRect(); svg.classList.add('wave');
-  clearTimeout(svg._w); svg._w = setTimeout(() => svg.classList.remove('wave'), 2000);
+  const svg = el.querySelector('svg.char-art');
+  if (G3 && el.querySelector('canvas.c3')) G3.wave();
+  else if (svg) { svg.classList.remove('wave'); void svg.getBoundingClientRect(); svg.classList.add('wave'); clearTimeout(svg._w); svg._w = setTimeout(() => svg.classList.remove('wave'), 2000); }
+  else return;
   const say = el.querySelector('.me-say');
   if (say) {
     const L = legendOf(ME().outfit);
@@ -1263,7 +1296,7 @@ function wardrobe(tab = 'outfits') {
   const draw = wave => {
     const m = ME(), lvl = levelOf(S.xp);
     $('#wdp', sh).innerHTML = charSVG({ orb: true });
-    if (wave) charWave($('#wdp', sh));
+    if (wave) setTimeout(() => charWave($('#wdp', sh)), 30);
     $('#wdt', sh).innerHTML = [['outfits', 'Outfits'], ['legends', 'Legends'], ['extras', 'Extras'], ['face', 'Face'], ['looks', 'Hair']].map(([k, l]) => `<button class="tog" aria-pressed="${tab === k}" data-wt="${k}">${l}</button>`).join('');
     const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="sw ${cur === i ? 'on' : ''}" style="--c:${Array.isArray(c) ? c[0] : c}" data-wl="${key}" data-v="${i}" aria-label="${Array.isArray(c) ? c[1] : 'Colour ' + (i + 1)}"></button>`).join('')}</div>`;
     const seg = (list, key, cur) => `<div class="seg">${list.map(([v, l]) => `<button class="tog" aria-pressed="${cur === v}" data-wl="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
