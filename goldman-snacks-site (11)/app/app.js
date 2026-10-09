@@ -508,7 +508,7 @@ function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const c = document.createElement('canvas'); c.className = 'confetti'; document.body.appendChild(c);
   const W_ = c.width = innerWidth, H = c.height = innerHeight, x = c.getContext('2d');
-  const cs = getComputedStyle(document.documentElement), cols = ['--acc', '--acc-700', '--tx', '--tx-2'].map(v => cs.getPropertyValue(v).trim());
+  const cols = ['#1A96E4', '#5CC8FF', '#3CC24A', '#8BE86A', '#FFD84A', '#FFFFFF'];
   const P = Array.from({ length: 90 }, () => ({ x: W_ / 2 + (Math.random() - .5) * 120, y: H * .35, vx: (Math.random() - .5) * 11, vy: -Math.random() * 11 - 4, r: Math.random() * 6, s: 4 + Math.random() * 5, c: cols[rnd(cols.length)] }));
   let t = 0;
   (function f() {

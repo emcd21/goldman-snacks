@@ -2,13 +2,13 @@
 // and the garden pictures at install, so the installed app works offline (except the tutor).
 // Pages and scripts are served from the cache at once and refreshed in the background, so a change to the
 // site reaches the app on the next launch. Bump VERSION when the list of files changes.
-const VERSION = 'gs-app-1';
+const VERSION = 'gs-app-2';
 const CACHE = 'gs-app-' + VERSION;
 const FILES = [
   './', 'index.html', 'app.css', 'app.js', 'notes.js', 'manifest.webmanifest', '../site.js', '../flashdata.js',
-  'fonts/fonts.css', 'fonts/inter-01457da3.woff2', 'fonts/inter-5ddcc8d0.woff2', 'fonts/sourceserif4-a0529622.woff2', 'fonts/sourceserif4-b973634a.woff2', 'fonts/amiriquran-8aaeb960.woff2',
+  'fonts/fonts.css', 'fonts/Hind-300.woff2', 'fonts/Hind-400.woff2', 'fonts/Hind-500.woff2', 'fonts/Hind-600.woff2', 'fonts/Hind-700.woff2', 'fonts/amiriquran-8aaeb960.woff2',
   'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
-  'img/hills.webp', 'img/grass.webp', 'img/lawn.webp',
+  'img/hills-aero.webp', 'img/bubbles.svg', 'img/bubble.svg', 'img/clouds.svg', 'img/grass.webp', 'img/lawn.webp',
   'img/garden/bg-1-f.webp',
   'img/garden/bg-1-t.webp',
   'img/garden/bg-2-f.webp',
