@@ -1,0 +1,31 @@
+<!doctype html><html lang="en-GB"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Goldman Snacks</title>
+<meta name="description" content="Learn accounting one short lesson a day, from double entry to group accounts and IFRS.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<meta name="theme-color" content="#0D0D0B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Goldman Snacks">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="app.css">
+</head><body>
+<div id="app"></div>
+<script src="../flashdata.js"></script>
+<script src="../site.js"></script>
+<script src="notes.js"></script>
+<script src="app.js"></script>
+<script>
+// Installed app: offline cache (sw.js), persistent storage, and the standalone class for the status-bar band.
+(() => {
+  if (navigator.standalone === true || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('standalone');
+  if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
+  const st = navigator.storage;
+  if (st && st.persist) (st.persisted ? st.persisted() : Promise.resolve(false)).then(p => p || st.persist()).catch(() => { });
+})();
+</script>
+</body></html>
