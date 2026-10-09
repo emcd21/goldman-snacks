@@ -60,8 +60,8 @@ export function headFields(spec) {
   };
   // lips: an upper and a lower lip, corners lifted for a smile
   const lip = (x, y, z) => {
-    const upper = min(sdCT(x, y, z, 0, -.129, .209, -cw, -.137 + upL, .192, .0095, .004), sdCT(x, y, z, 0, -.129, .209, cw, -.137 + upR, .192, .0095, .004));
-    const lower = min(sdCT(x, y, z, 0, -.146, .205, -cw * .85, -.139 + upL, .193, .012, .004), sdCT(x, y, z, 0, -.146, .205, cw * .85, -.139 + upR, .193, .012, .004));
+    const upper = min(sdCT(x, y, z, 0, -.129, .203, -cw, -.137 + upL, .192, .0095, .004), sdCT(x, y, z, 0, -.129, .203, cw, -.137 + upR, .192, .0095, .004));
+    const lower = min(sdCT(x, y, z, 0, -.146, .199, -cw * .85, -.139 + upL, .193, .012, .004), sdCT(x, y, z, 0, -.146, .199, cw * .85, -.139 + upR, .193, .012, .004));
     return min(upper, lower);
   };
   const mouthLine = (x, y, z) => min(sdC(x, y, z, 0, -.1375, .222, -cw * .95, -.136 + upL, .2, 0), sdC(x, y, z, 0, -.1375, .222, cw * .95, -.136 + upR, .2, 0));

@@ -378,14 +378,14 @@ function pose(parts, t, st) {
   const breath = Math.sin(t * 1.6);
   torso.scale.set(1 + breath * .004, 1 + breath * .006, 1 + breath * .006);
   parts.body.rotation.z = Math.sin(t * .55) * .008; parts.body.position.x = Math.sin(t * .55) * .01;
-  head.rotation.set(Math.sin(t * .7) * .03 + st.nod, Math.sin(t * .31) * .14 + st.look, Math.sin(t * .9) * .02 + st.tilt);
+  head.rotation.set(Math.sin(t * .7) * .03 + st.nod, Math.sin(t * .31) * .09 + st.look, Math.sin(t * .9) * .02 + st.tilt);
   head.position.y = HEAD_Y + breath * .004;
   eyes.forEach(e => e.rotation.set(Math.sin(t * .43) * .06, Math.sin(t * .31 + .6) * .12, 0));
   const blink = st.blink > 0 ? 1 - Math.abs(st.blink - .07) / .07 : 0;
   lids.forEach(l => l.lid.rotation.x = l.open + (1.05 - l.open) * Math.max(0, blink));
   // the holding arm
   const sw = Math.sin(t * 1.6) * .01;
-  if (parts.pose === 'up') { ik(ha, .3, 2.12 + sw, .36, 1.2, 1.6, -1); ha.open.visible = false; ha.fist.visible = true; }
+  if (parts.pose === 'up') { ik(ha, .3, 2.36 + sw, .4, 1.2, 1.6, -1); ha.open.visible = false; ha.fist.visible = true; }
   else if (parts.pose === 'down') { ik(ha, .52, 1.6 + sw, .06, 1, 2.2, -1.5); ha.fist.visible = true; ha.open.visible = false; }
   else if (parts.pose === 'tuck') { ik(ha, .46, 2.02, .16, 1.2, 1.8, -1.2); ha.fist.visible = false; ha.open.visible = true; }
   else { ik(ha, .55, 1.62 + sw, .02, 1, 2.4, -1.6); ha.fist.visible = false; ha.open.visible = true; }
@@ -440,7 +440,7 @@ export function live(host, spec, placeholder) {
   }
   const k = JSON.stringify(spec);
   if (k !== L.key) {
-    L.key = k; const gen = ++L.gen, ch = build(spec, .007);
+    L.key = k; const gen = ++L.gen, ch = build(spec, .0062);
     L.ready = ch.userData.ready.then(() => { if (gen !== L.gen) return; if (L.char) { L.scene.remove(L.char); dispose(L.char); } L.char = ch; L.scene.add(ch); });
   }
   // show the canvas (in place of the placeholder) once he is ready
@@ -451,7 +451,7 @@ export function live(host, spec, placeholder) {
 function size() {
   const c = L.canvas, w = c.clientWidth || 240, h = c.clientHeight || w / .75;
   const pr = L.r.getPixelRatio(); if (c.width !== Math.round(w * pr) || c.height !== Math.round(h * pr)) L.r.setSize(w, h, false);
-  L.cam.aspect = w / h; L.cam.position.set(0, 2.2, 10.2); L.cam.lookAt(0, 1.78, 0); L.cam.updateProjectionMatrix();
+  L.cam.aspect = w / h; L.cam.position.set(0, 3.0, 4.3); L.cam.lookAt(0, 2.78, 0); L.cam.updateProjectionMatrix();
 }
 function loop(now) {
   if (!L.canvas.isConnected) { L.raf = 0; return; }
@@ -465,7 +465,7 @@ function loop(now) {
   st.tilt = st.wave > 0 ? Math.sin(wp * 3) * .05 : 0; st.nod = st.wave > 0 ? -.03 : 0;
   if (!L.drag) { L.yaw += L.vyaw; L.vyaw *= .92; }
   const ch = L.char;
-  ch.rotation.y = L.yaw + Math.sin(t * .25) * .3 - .12;
+  ch.rotation.y = L.yaw + Math.sin(t * .25) * .16 - .06;
   pose(ch.userData, t, st);
   L.r.render(L.scene, L.cam);
 }
@@ -484,7 +484,7 @@ export async function shot(spec, view, w = 240, h = 300) {
   cam.aspect = w / h;
   if (view === 'head') { cam.position.set(0, 3.16, 1.9); cam.lookAt(0, 3.08, 0); }
   else if (view === 'full') { cam.position.set(0, 2.2, 10.2); cam.lookAt(0, 1.78, 0); }
-  else { cam.position.set(0, 2.85, 4.0); cam.lookAt(0, 2.62, 0); }
+  else { cam.position.set(0, 2.95, 4.0); cam.lookAt(0, 2.72, 0); }
   cam.updateProjectionMatrix();
   r.render(scene, cam);
   const url = r.domElement.toDataURL('image/png');
