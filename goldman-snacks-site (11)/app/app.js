@@ -444,8 +444,8 @@ function finishLesson() {
     lvlAfter > lvlBefore ? unlockRow(ICON.trophy, 'Level up', `You are now ${titleOf(lvlAfter)[1]}.`, `<span class="pill solid p-white">Level ${lvlAfter}</span>`) : '',
     goalHit ? unlockRow(ICON.flame, 'Daily goal reached', `Your streak is ${S.streak} day${S.streak === 1 ? '' : 's'}.`, `<span class="pill solid p-green">${ICON.check}Done</span>`) : '',
     ...ach.map(a => unlockRow(CODE(a.g), a.name, a.desc, '<span class="pill solid p-lime">New</span>')),
-    ...[...OUTFITS, ...EXTRAS].filter(x => unlockedBy(x) && !uBefore.has(x.id)).map(x => OUTFITS.includes(x)
-      ? unlockRow(charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } }), `New outfit: ${x.name}`, 'Put it on in the wardrobe on your Profile.', '<span class="pill solid p-lime">Wardrobe</span>')
+    ...[...WEAR, ...EXTRAS].filter(x => !x.of && unlockedBy(x) && !uBefore.has(x.id)).map(x => WEAR.includes(x)
+      ? unlockRow(charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } }), x.from ? `New legend: ${x.name}` : `New outfit: ${x.name}`, x.from ? `${x.from}. Dress as him in the wardrobe on your Profile.` : 'Put it on in the wardrobe on your Profile.', '<span class="pill solid p-lime">Wardrobe</span>')
       : unlockRow(ICON.star, `New extra: ${x.name}`, 'Add it in the wardrobe on your Profile.', '<span class="pill solid p-lime">Wardrobe</span>')),
     ...GARDEN.slice(gBefore, gardenLevel()).map(g => unlockRow(g.pet ? petPic(g.pet) : ICON.sprout, g.name, `${g.desc} Balsam’s Garden is coming back to life.`, '<span class="pill solid p-lime">Garden</span>')),
   ].join('');
@@ -836,7 +836,7 @@ function viewMe() {
   const nums = [['Current streak', plural(liveStreak(), 'day')], ['Best streak', plural(S.best, 'day')], ['Lessons finished', S.stats.lessons], ['Topics complete', `${PATH.filter(isComplete).length} of ${PATH.length}`], ['Accuracy', acc + '%'], ['Best run', `${S.stats.maxCombo} in a row`], ['Notes read', Object.keys(S.readLog).length]];
   return `<div class="page">
     ${scene('scene-me', `<span class="eyebrow">Profile · Level ${lvl}</span><h1 class="display">${esc(t[1])}</h1>
-      <div class="scene-cta"><button class="btn lg white" data-wardrobe>Dress up</button></div>`, `<button class="me-stand" data-wardrobe aria-label="Open the wardrobe">${charSVG({ orb: true })}</button>`, 92)}
+      <div class="scene-cta"><button class="btn lg white" data-wardrobe>Dress up</button></div>`, `<button class="me-stand" data-wave aria-label="Say hello to your character"><span class="me-say" role="status" hidden></span>${charSVG({ orb: true })}</button>`, 92)}
     ${charCard()}
     <section class="card glow stack lvlcard">
       <div class="list-head"><h3>Level ${lvl}</h3><span class="pill p-lime">${t[1]}</span></div>
@@ -949,6 +949,7 @@ function wireCommon(app) {
   });
   wireTerms(app);
   app.querySelectorAll('[data-wardrobe]').forEach(b => b.onclick = () => wardrobe());
+  app.querySelectorAll('[data-wave]').forEach(b => { b.onclick = () => { charWave(b); sfx.tap(); buzz(8); }; if (!WAVED) { WAVED = true; setTimeout(() => charWave(b, 'Hi! Tap me any time.'), 700); } });
   app.querySelectorAll('[data-noinstall]').forEach(b => b.onclick = () => { S.settings.noInstall = true; save(); render(); });
   app.querySelectorAll('[data-install]').forEach(b => b.onclick = async () => { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) { } INSTALL = null; render(); });
   app.querySelectorAll('[data-xfer="copy"]').forEach(b => b.onclick = () => {
@@ -982,15 +983,24 @@ function testOut(ui) {
 }
 
 /* ================= your character =================
-   A character you dress yourself. Looks (skin, hair, facial hair, glasses, tie colour) are free from the start;
-   outfits unlock with your level, from a plain white shirt or a quarter-zip up to the boss suit, and extras
-   unlock with levels and achievements. He stands in a glass bubble on the Profile meadow. */
+   A character you dress yourself. Looks and face (skin, hair, eyes, brows, nose, mouth, facial hair, glasses,
+   tie colour) are free from the start; outfits unlock with your level, from a plain white shirt or a quarter-zip
+   up to the boss suit; Legends are full looks of famous finance figures, real and on screen, unlocked by
+   achievements; extras unlock with levels and achievements. He stands in a glass bubble on the Profile meadow,
+   breathes, blinks, and waves when you tap him. */
 const SKINS = ['#F6D9C6', '#EDC3A3', '#D9A27C', '#B97B55', '#8D5A3B', '#5E3B27'];
 const HAIR_COLS = [['#1F1B18', 'Black'], ['#3E2B20', 'Dark brown'], ['#71502F', 'Brown'], ['#D8B36C', 'Blonde'], ['#B5582B', 'Ginger'], ['#A7A7A7', 'Grey']];
-const HAIRS = [['short', 'Short'], ['side', 'Side part'], ['buzz', 'Buzz cut'], ['curly', 'Curly'], ['quiff', 'Quiff'], ['long', 'Long'], ['bun', 'Bun'], ['bald', 'Bald']];
+const HAIRS = [['short', 'Short'], ['side', 'Side part'], ['slick', 'Slicked back'], ['buzz', 'Buzz cut'], ['curly', 'Curly'], ['messy', 'Messy'], ['quiff', 'Quiff'], ['long', 'Long'], ['bun', 'Bun'], ['bald', 'Bald']];
 const BEARDS = [['none', 'None'], ['stubble', 'Stubble'], ['tash', 'Moustache'], ['beard', 'Beard']];
-const GLASSES = [['none', 'None'], ['round', 'Round'], ['square', 'Square']];
+const GLASSES = [['none', 'None'], ['round', 'Round'], ['square', 'Square'], ['big', 'Big frames']];
 const TIES = ['#8C1C2B', '#1F4E9C', '#2E7D4F', '#5B3A8C', '#C9A227', '#9AA4B1'];
+const FACES = [['oval', 'Oval'], ['round', 'Round'], ['long', 'Long'], ['square', 'Square jaw']];
+const EYES = [['dot', 'Classic'], ['round', 'Round'], ['almond', 'Almond'], ['wide', 'Wide'], ['sleepy', 'Sleepy'], ['lash', 'Lashes']];
+const EYE_COLS = [['#5A3B22', 'Brown'], ['#8A6A32', 'Hazel'], ['#3F7A4A', 'Green'], ['#3A78B5', 'Blue'], ['#6F7F8C', 'Grey']];
+const BROWS = [['soft', 'Soft'], ['straight', 'Straight'], ['thick', 'Thick'], ['arched', 'Arched'], ['serious', 'Serious']];
+const NOSES = [['curve', 'Curved'], ['button', 'Button'], ['long', 'Long'], ['broad', 'Broad']];
+const MOUTHS = [['smile', 'Smile'], ['grin', 'Grin'], ['smirk', 'Smirk'], ['small', 'Small'], ['flat', 'Straight']];
+const MARKS = [['none', 'None'], ['freckles', 'Freckles'], ['blush', 'Rosy cheeks'], ['mole', 'Beauty spot']];
 // Outfits, in the order they unlock. lvl is the level that unlocks it.
 const OUTFITS = [
   { id: 'white', name: 'Plain white shirt', lvl: 1, desc: 'Day one. Sleeves rolled, ready to learn.' },
@@ -998,11 +1008,22 @@ const OUTFITS = [
   { id: 'shirttie', name: 'Shirt and tie', lvl: 3, desc: 'Bookkeeper smart.' },
   { id: 'blazer', name: 'Navy blazer', lvl: 5, desc: 'Client meeting ready.' },
   { id: 'grey', name: 'Grey suit', lvl: 6, desc: 'An accounts assistant’s first suit.' },
+  { id: 'gilet', name: 'The gilet', lvl: 8, desc: 'Fleece vest, blue shirt. The analyst uniform.' },
   { id: 'navy', name: 'Navy suit', lvl: 10, desc: 'Qualified accountant.' },
   { id: 'three', name: 'Three-piece suit', lvl: 15, desc: 'Senior, with a waistcoat to prove it.' },
   { id: 'boss', name: 'The boss suit', lvl: 20, desc: 'Black pinstripe, gold tie. Finance director.' },
 ];
-// Extras: things he wears (on) and one thing he holds (hold). Each unlocks by level or by an achievement.
+// Legends: a full look (outfit, hair, glasses) plus a signature thing to hold, each unlocked by an achievement.
+// Your skin and face stay your own.
+const LEGENDS = [
+  { id: 'burry', name: 'Michael Burry', from: 'The Big Short', ach: 'notes10', desc: 'Band T-shirt and drumsticks. Read every page, then bet against the market.', look: { hair: 'messy', hairCol: 0, beard: 'none', glasses: 'none' }, hold: 'sticks', quote: 'I may be early, but I’m not wrong.' },
+  { id: 'bateman', name: 'Patrick Bateman', from: 'American Psycho', ach: 'perfect', desc: 'A flawless suit and an even more flawless business card.', look: { hair: 'slick', hairCol: 0, beard: 'none', glasses: 'none' }, hold: 'card', quote: 'Look at that subtle off-white colouring.' },
+  { id: 'wolf', name: 'Jordan Belfort', from: 'The Wolf of Wall Street', ach: 'combo10', desc: 'Sharp suit, sharper sales pitch.', look: { hair: 'slick', hairCol: 3, beard: 'none', glasses: 'none' }, hold: 'sellpen', quote: 'Sell me this pen.' },
+  { id: 'gekko', name: 'Gordon Gekko', from: 'Wall Street', ach: 'groups', desc: 'Red braces, contrast collar and a brick phone. Takeovers welcome.', look: { hair: 'slick', hairCol: 1, beard: 'none', glasses: 'none' }, hold: 'phone', quote: 'Greed, for lack of a better word, is good.' },
+  { id: 'buffett', name: 'Warren Buffett', from: 'The Oracle of Omaha', ach: 'streak30', desc: 'Big glasses, grey suit and a cherry cola. Patience pays.', look: { hair: 'side', hairCol: 5, beard: 'none', glasses: 'big', brows: 'thick' }, hold: 'cola', quote: 'Be fearful when others are greedy.' },
+];
+const WEAR = [...OUTFITS, ...LEGENDS];
+// Extras: things he wears (on) and one thing he holds (hold). Each unlocks by level, by an achievement, or with a legend (of).
 const EXTRAS = [
   { id: 'lanyard', name: 'Office pass', kind: 'on', lvl: 2 },
   { id: 'pen', name: 'Pen in pocket', kind: 'on', lvl: 4 },
@@ -1012,112 +1033,188 @@ const EXTRAS = [
   { id: 'laptop', name: 'Laptop', kind: 'hold', lvl: 8 },
   { id: 'case', name: 'Leather briefcase', kind: 'hold', lvl: 12 },
   { id: 'trophy', name: 'Exam trophy', kind: 'hold', ach: 'mock80' },
+  { id: 'sticks', name: 'Drumsticks', kind: 'hold', of: 'burry' },
+  { id: 'card', name: 'Bone business card', kind: 'hold', of: 'bateman' },
+  { id: 'sellpen', name: 'The pen', kind: 'hold', of: 'wolf' },
+  { id: 'phone', name: 'Brick phone', kind: 'hold', of: 'gekko' },
+  { id: 'cola', name: 'Cherry cola', kind: 'hold', of: 'buffett' },
 ];
-const JACKETS = { blazer: 1, grey: 1, navy: 1, three: 1, boss: 1 };
-const meDefault = () => ({ skin: 1, hair: 'short', hairCol: 1, beard: 'none', glasses: 'none', tie: 0, outfit: 'white', on: {}, hold: '' });
+const SUITS = { blazer: '#22406E', grey: '#7C858F', navy: '#1C2C4C', three: '#3A3F48', boss: '#16181D', bateman: '#6E685E', wolf: '#252B39', buffett: '#5F656E' };
+const JACKETS = SUITS;
+const meDefault = () => ({ skin: 1, hair: 'short', hairCol: 1, beard: 'none', glasses: 'none', tie: 0, outfit: 'white', on: {}, hold: '', face: 'oval', eyes: 'dot', eyeCol: 0, brows: 'soft', nose: 'curve', mouth: 'smile', marks: 'none' });
 const ME = () => (S.me = Object.assign(meDefault(), S.me));
 const achName = id => (ACH.find(a => a[0] === id) || [, id])[1];
-const unlockedBy = x => x.ach ? !!S.ach[x.ach] : levelOf(S.xp) >= x.lvl;
-const needText = x => x.ach ? `Earn “${achName(x.ach)}”` : `Level ${x.lvl}`;
-const unlockedIds = () => new Set([...OUTFITS, ...EXTRAS].filter(unlockedBy).map(x => x.id));
+const legendOf = id => LEGENDS.find(l => l.id === id);
+const unlockedBy = x => x.of ? unlockedBy(legendOf(x.of)) : x.ach ? !!S.ach[x.ach] : levelOf(S.xp) >= x.lvl;
+const needText = x => x.of ? `Comes with ${legendOf(x.of).name}` : x.ach ? `Earn “${achName(x.ach)}”` : `Level ${x.lvl}`;
+const unlockedIds = () => new Set([...WEAR, ...EXTRAS].filter(unlockedBy).map(x => x.id));
 const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f)); return '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''); };
+const QUIPS = ['Debits on the left, credits on the right.', 'Assets equal liabilities plus equity. Always.', 'One more lesson?', 'Accruals before coffee.', 'Did somebody say reconciliation?', 'Let’s balance some books.', 'Prudence is my middle name.'];
 
-let CHAR_N = 0;
+let CHAR_N = 0, WAVED = false;
 // The character as SVG. opt.orb puts him in a glass bubble; opt.head crops to his head (the top bar);
-// opt.preview draws an outfit in a tile; opt.me overrides what he wears.
+// opt.preview draws an outfit in a tile; opt.me overrides what he wears. Orb and head are animated (class live).
 function charSVG(opt = {}) {
   const m = Object.assign({}, ME(), opt.me || {}), id = 'c' + (++CHAR_N);
+  const L = legendOf(m.outfit); if (L) Object.assign(m, L.look);
   const skin = SKINS[m.skin] || SKINS[1], skinD = shade(skin, -.16), hc = (HAIR_COLS[m.hairCol] || HAIR_COLS[1])[0], hcD = shade(hc, -.25);
-  const o = m.outfit, jacket = !!JACKETS[o];
-  const SUIT = { blazer: '#22406E', grey: '#7C858F', navy: '#1C2C4C', three: '#3A3F48', boss: '#16181D' }[o];
-  const shirt = o === 'shirttie' ? '#BFD8F0' : '#F7F9FB';
-  const tie = o === 'boss' ? '#D4A537' : TIES[m.tie] || TIES[0];
-  const hasTie = o === 'shirttie' || o === 'grey' || o === 'navy' || o === 'three' || o === 'boss';
+  const o = m.outfit, SUIT = SUITS[o], jacket = !!SUIT;
+  const shirt = o === 'shirttie' || o === 'gilet' ? '#BFD8F0' : o === 'gekko' ? '#D3E3F4' : '#F7F9FB';
+  const tie = { boss: '#D4A537', bateman: '#7B3036', wolf: '#CDBB86', gekko: '#E0B53C', buffett: '#24407A' }[o] || TIES[m.tie] || TIES[0];
+  const tiePat = { bateman: 1, gekko: 1, buffett: 1 }[o];
+  const hasTie = ['shirttie', 'grey', 'navy', 'three', 'boss', 'bateman', 'wolf', 'gekko', 'buffett'].includes(o);
+  const tee = o === 'burry' ? '#2A2D33' : '';
+  const body = o === 'qzip' ? '#5E6E80' : jacket ? SUIT : tee || shirt;
+  const sleeve = o === 'gilet' ? shirt : body, cuff = jacket ? '#F7F9FB' : '';
   const T = 'M22 262 C24 204 44 178 76 167 Q100 160 124 167 C156 178 176 204 178 262 Z';
   let s = `<defs>
     <linearGradient id="${id}sh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
     <radialGradient id="${id}side" cx=".5" cy=".35" r=".75"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></radialGradient>
     <radialGradient id="${id}face" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".12"/></radialGradient>
     <pattern id="${id}pin" width="7" height="10" patternUnits="userSpaceOnUse"><path d="M3.5 0V10" stroke="#fff" stroke-opacity=".16" stroke-width=".8"/></pattern>
+    <pattern id="${id}str" width="5" height="10" patternUnits="userSpaceOnUse"><path d="M2.5 0V10" stroke="#3E6FB0" stroke-opacity=".45" stroke-width="1"/></pattern>
+    <pattern id="${id}dot" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2.5" cy="2.5" r=".9" fill="#fff" fill-opacity=".5"/></pattern>
     <linearGradient id="${id}gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF0B3"/><stop offset=".45" stop-color="#E2B33E"/><stop offset="1" stop-color="#A97A12"/></linearGradient>
-    <clipPath id="${id}t"><path d="${T}"/></clipPath></defs>`;
-  // hair behind the head
-  if (m.hair === 'long') s += `<path d="M62 92 C58 140 64 168 74 176 L126 176 C136 168 142 140 138 92 Z" fill="${hcD}"/>`;
-  if (m.hair === 'bun') s += `<circle cx="100" cy="46" r="15" fill="${hc}"/><circle cx="96" cy="42" r="5" fill="#fff" opacity=".12"/>`;
+    <linearGradient id="${id}arm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".18"/><stop offset=".5" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".2"/></linearGradient>
+    <clipPath id="${id}t"><path d="${T}"/></clipPath></defs><g class="cw">`;
+  // the waving arm sits behind the body and swings up when he waves
+  const hand = (x, y) => `<ellipse cx="${x}" cy="${y}" rx="9.5" ry="11" fill="${skin}"/><ellipse cx="${x + 9}" cy="${y + 4}" rx="3.6" ry="6" transform="rotate(30 ${x + 9} ${y + 4})" fill="${skin}"/><path d="M${x - 4} ${y - 9} V${y - 2} M${x} ${y - 10} V${y - 2} M${x + 4} ${y - 9} V${y - 2}" stroke="${skinD}" stroke-width="1" stroke-linecap="round" opacity=".7"/>`;
+  const armW = `<g class="arm-w"><path d="M52 250 L44 152" stroke="${sleeve}" stroke-width="19" stroke-linecap="round"/><path d="M52 250 L44 152" stroke="url(#${id}arm)" stroke-width="19" stroke-linecap="round"/>${cuff ? `<path d="M44.6 160 L44 152" stroke="${cuff}" stroke-width="19"/>` : ''}${hand(43, 138)}</g>`;
+  // hair behind the head moves with the head
+  let back = '';
+  if (m.hair === 'long') back += `<path d="M62 92 C58 140 64 168 74 176 L126 176 C136 168 142 140 138 92 Z" fill="${hcD}"/>`;
+  if (m.hair === 'bun') back += `<circle cx="100" cy="46" r="15" fill="${hc}"/><circle cx="96" cy="42" r="5" fill="#fff" opacity=".12"/>`;
+  if (back) s += `<g class="ch">${back}</g>`;
   // neck
   s += `<path d="M88 116 V172 H112 V116 Z" fill="${skin}"/><path d="M88 128 Q100 140 112 128 V136 Q100 146 88 136 Z" fill="${skinD}" opacity=".55"/>`;
   // body (raised a little, for a shorter neck)
-  s += '<g transform="translate(0 -9)">';
-  const body = o === 'qzip' ? '#5E6E80' : jacket ? SUIT : shirt;
+  s += `<g transform="translate(0 -9)">${opt.preview || opt.head ? '' : armW}<g class="cb">`;
   s += `<path d="${T}" fill="${body}"/>`;
   if (o === 'boss') s += `<path d="${T}" fill="url(#${id}pin)"/>`;
-  if (o === 'white' || o === 'shirttie') {
+  if (o === 'gekko') s += `<path d="${T}" fill="url(#${id}str)"/>`;
+  if (o === 'white' || o === 'shirttie' || o === 'gekko' || o === 'gilet') {
     s += `<g clip-path="url(#${id}t)"><path d="M100 168 V262" stroke="${shade(shirt, -.12)}" stroke-width="1.2"/>${[192, 214, 236].map(y => `<circle cx="100" cy="${y}" r="1.9" fill="${shade(shirt, -.2)}"/>`).join('')}
-      <path d="M126 197 h18 v12 q-9 4 -18 0 z" fill="none" stroke="${shade(shirt, -.14)}" stroke-width="1.2"/></g>`;
-    if (o === 'white') s += `<path d="M92 162 L100 177 L108 162 Z" fill="${skin}"/><path d="M40 238 Q46 250 44 262 M160 238 Q154 250 156 262" stroke="${shade(shirt, -.14)}" stroke-width="1.4" fill="none"/>`;
-    s += collar(shirt) + (o === 'shirttie' ? tieSVG(tie) : '');
+      ${o === 'white' || o === 'shirttie' ? `<path d="M126 197 h18 v12 q-9 4 -18 0 z" fill="none" stroke="${shade(shirt, -.14)}" stroke-width="1.2"/>` : ''}</g>`;
+    if (o === 'white' || o === 'gilet') s += `<path d="M92 162 L100 177 L108 162 Z" fill="${skin}"/>`;
+    if (o === 'white') s += `<path d="M40 238 Q46 250 44 262 M160 238 Q154 250 156 262" stroke="${shade(shirt, -.14)}" stroke-width="1.4" fill="none"/>`;
+    if (o === 'gilet') {
+      const g = '#1E2C44', gl = 'M26 262 C30 220 44 196 62 184 Q74 176 82 160 L95 204 L97 262 Z', gr = 'M174 262 C170 220 156 196 138 184 Q126 176 118 160 L105 204 L103 262 Z';
+      s += `<path d="${gl}" fill="${g}"/><path d="${gr}" fill="${g}"/><path d="M82 160 L95 204 L97 262 M118 160 L105 204 L103 262" stroke="#9AA9BC" stroke-width="1.6" fill="none"/>
+        <path d="M62 184 Q74 176 82 160 M138 184 Q126 176 118 160" stroke="${shade(g, .25)}" stroke-width="5" fill="none" stroke-linecap="round"/><rect x="122" y="200" width="13" height="6" rx="1.5" fill="#fff" opacity=".75"/>`;
+    }
+    s += collar(o === 'gekko' ? '#FFFFFF' : shirt) + (hasTie ? tieSVG(tie, false, tiePat) : '');
+    if (o === 'gekko') s += `<g stroke="#B3262E" stroke-width="7"><path d="M76 172 L82 262"/><path d="M124 172 L118 262"/></g><g fill="url(#${id}gold)"><rect x="75" y="206" width="9" height="6" rx="1.5"/><rect x="116" y="206" width="9" height="6" rx="1.5"/></g>`;
   } else if (o === 'qzip') {
     s += `<path d="M100 166 V214" stroke="#C9D3DD" stroke-width="2"/><rect x="97.5" y="184" width="5" height="10" rx="1.6" fill="#DDE4EA"/>
       <path d="M80 152 Q100 160 120 152 L122 168 Q100 176 78 168 Z" fill="#4E5D6E"/><path d="M100 158 V175" stroke="#C9D3DD" stroke-width="2"/>
       <path d="M30 236 Q100 246 170 236" stroke="#4E5D6E" stroke-width="3" fill="none" opacity=".5"/>`;
+  } else if (tee) {
+    s += `<path d="M84 160 Q100 180 116 160 Z" fill="${skin}"/><path d="M83 160 Q100 181 117 160" stroke="${shade(tee, .18)}" stroke-width="4" fill="none"/>
+      <g fill="#ECECEC"><circle cx="100" cy="202" r="12"/><rect x="92" y="207" width="16" height="10" rx="2.5"/></g><circle cx="95.5" cy="202" r="3.4" fill="${tee}"/><circle cx="104.5" cy="202" r="3.4" fill="${tee}"/><path d="M98.5 209 L100 206 L101.5 209 Z" fill="${tee}"/>
+      <path d="M96 212 V217 M100 212 V217 M104 212 V217" stroke="${tee}" stroke-width="1.4"/><path d="M80 190 L86 198 L82 200 L88 210 M120 190 L114 198 L118 200 L112 210" stroke="#C8343B" stroke-width="2.4" fill="none" stroke-linejoin="round"/>
+      <text x="100" y="236" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="1.5" fill="#C8343B" font-family="sans-serif">METAL</text>`;
   } else {
     const three = o === 'three';
     s += `<path d="M85 160 L100 220 L115 160 Z" fill="${three ? shade(SUIT, .14) : shirt}"/>`;
     if (three) s += `<path d="M91 160 L100 196 L109 160 Z" fill="${shirt}"/>${[202, 212].map(y => `<circle cx="100" cy="${y}" r="1.6" fill="${shade(SUIT, -.3)}"/>`).join('')}`;
     else if (!hasTie) s += `<path d="M92 162 L100 178 L108 162 Z" fill="${skin}"/>`;
-    s += collar(shirt) + (hasTie ? tieSVG(tie, o === 'boss') : '');
-    const lap = shade(SUIT, -.22), L = 'M86 158 L100 222 L88 206 L73 182 L82 177 L78 166 Z', R = 'M114 158 L100 222 L112 206 L127 182 L118 177 L122 166 Z';
-    s += `<path d="${L}" fill="${lap}"/><path d="${R}" fill="${lap}"/>${o === 'boss' ? `<path d="${L}" fill="url(#${id}pin)"/><path d="${R}" fill="url(#${id}pin)"/>` : ''}
+    s += collar(shirt) + (hasTie ? tieSVG(tie, o === 'boss', tiePat) : '');
+    const lap = shade(SUIT, -.22), Lp = 'M86 158 L100 222 L88 206 L73 182 L82 177 L78 166 Z', Rp = 'M114 158 L100 222 L112 206 L127 182 L118 177 L122 166 Z';
+    s += `<path d="${Lp}" fill="${lap}"/><path d="${Rp}" fill="${lap}"/>${o === 'boss' ? `<path d="${Lp}" fill="url(#${id}pin)"/><path d="${Rp}" fill="url(#${id}pin)"/>` : ''}
       <path d="M86 158 L100 222 M114 158 L100 222" stroke="${shade(SUIT, -.4)}" stroke-width="1"/>
       <circle cx="100" cy="232" r="2.6" fill="${shade(SUIT, -.35)}"/><circle cx="100" cy="250" r="2.6" fill="${shade(SUIT, -.35)}"/>
       <path d="M120 200 L142 197" stroke="${shade(SUIT, -.35)}" stroke-width="1.4"/>`;
-    if (o === 'boss' || o === 'three') s += `<path d="M122 200 L126 191 L130 199 L134 190 L139 198 Z" fill="${o === 'boss' ? `url(#${id}gold)` : '#F4F6F8'}"/>`;
+    if (o === 'boss' || o === 'three' || o === 'bateman') s += `<path d="M122 200 L126 191 L130 199 L134 190 L139 198 Z" fill="${o === 'boss' ? `url(#${id}gold)` : '#F4F6F8'}"/>`;
   }
   s += `<path d="${T}" fill="url(#${id}sh)"/><path d="${T}" fill="url(#${id}side)"/>`;
   // things he wears
   if (m.on.lanyard && unlockedBy(EXTRAS[0])) s += `<path d="M90 162 Q80 186 72 204 M110 162 Q96 186 78 204" stroke="#1A96E4" stroke-width="3" fill="none"/><rect x="64" y="203" width="20" height="26" rx="3" fill="#fff" stroke="#BFD3E2"/><rect x="64" y="203" width="20" height="7" rx="3" fill="#1A96E4"/><circle cx="74" cy="217" r="3.6" fill="#D6E3EC"/><rect x="68" y="223" width="12" height="2" rx="1" fill="#C7D5E0"/>`;
   if (m.on.pen && unlockedBy(EXTRAS[1])) s += `<rect x="136" y="182" width="3.4" height="18" rx="1.5" fill="#1C2C4C"/><rect x="136" y="182" width="3.4" height="5" rx="1.5" fill="#D4A537"/>`;
   if (m.on.pin && jacket && unlockedBy(EXTRAS[2])) s += `<circle cx="121" cy="184" r="3.6" fill="url(#${id}gold)"/><circle cx="120" cy="183" r="1.1" fill="#fff" opacity=".8"/>`;
-  s += '</g>';
-  // head
-  s += `<ellipse cx="68" cy="97" rx="6.5" ry="9.5" fill="${skin}"/><ellipse cx="132" cy="97" rx="6.5" ry="9.5" fill="${skin}"/>
-    <ellipse cx="68" cy="97" rx="3" ry="5" fill="${skinD}" opacity=".5"/><ellipse cx="132" cy="97" rx="3" ry="5" fill="${skinD}" opacity=".5"/>
-    <ellipse cx="100" cy="92" rx="32" ry="38" fill="${skin}"/><ellipse cx="100" cy="92" rx="32" ry="38" fill="url(#${id}face)"/>
-    <ellipse cx="84" cy="106" rx="6" ry="3.5" fill="#F08A8A" opacity=".18"/><ellipse cx="116" cy="106" rx="6" ry="3.5" fill="#F08A8A" opacity=".18"/>
-    <path d="M80 82 Q87 78 94 81 M106 81 Q113 78 120 82" stroke="${m.hair === 'bald' ? skinD : hcD}" stroke-width="3" stroke-linecap="round" fill="none"/>
-    <ellipse cx="87.5" cy="93" rx="3.6" ry="4.2" fill="#2A211C"/><ellipse cx="112.5" cy="93" rx="3.6" ry="4.2" fill="#2A211C"/>
-    <circle cx="88.8" cy="91.5" r="1.3" fill="#fff"/><circle cx="113.8" cy="91.5" r="1.3" fill="#fff"/>
-    <path d="M100 96 Q96.5 106 101 107.5" stroke="${skinD}" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <path d="M90 114 Q100 122 110 114" stroke="#8A4A3C" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  s += '</g></g>';
+  // head: face shape, ears, then features
+  const F = { oval: [32, 38, 92], round: [34, 36, 93], long: [30, 41, 91] }[m.face];
+  const ex = F ? F[0] : 32;
+  const faceEl = fill => F ? `<ellipse cx="100" cy="${F[2]}" rx="${F[0]}" ry="${F[1]}" fill="${fill}"/>` : `<path d="M68 84 C68 58 84 54 100 54 C116 54 132 58 132 84 L132 102 C132 122 118 130 100 130 C82 130 68 122 68 102 Z" fill="${fill}"/>`;
+  let h = `<ellipse cx="${100 - ex}" cy="97" rx="6.5" ry="9.5" fill="${skin}"/><ellipse cx="${100 + ex}" cy="97" rx="6.5" ry="9.5" fill="${skin}"/>
+    <ellipse cx="${100 - ex}" cy="97" rx="3" ry="5" fill="${skinD}" opacity=".5"/><ellipse cx="${100 + ex}" cy="97" rx="3" ry="5" fill="${skinD}" opacity=".5"/>
+    ${faceEl(skin)}${faceEl(`url(#${id}face)`)}
+    <ellipse cx="84" cy="106" rx="6" ry="3.5" fill="#F08A8A" opacity="${m.marks === 'blush' ? .45 : .18}"/><ellipse cx="116" cy="106" rx="6" ry="3.5" fill="#F08A8A" opacity="${m.marks === 'blush' ? .45 : .18}"/>`;
+  if (m.marks === 'freckles') h += `<g fill="${shade(skin, -.35)}" opacity=".55">${[[79, 103], [84, 101], [82, 107], [88, 104], [121, 103], [116, 101], [118, 107], [112, 104]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".95"/>`).join('')}</g>`;
+  if (m.marks === 'mole') h += `<circle cx="114" cy="117" r="1.4" fill="#4A3328"/>`;
+  // eyebrows
+  const bc = m.hair === 'bald' ? skinD : hcD;
+  const B = {
+    soft: ['M80 82 Q87 78 94 81 M106 81 Q113 78 120 82', 3],
+    straight: ['M80 81 H94 M106 81 H120', 3.2],
+    thick: ['M79 82 Q87 77 95 80 M105 80 Q113 77 121 82', 5.2],
+    arched: ['M80 83 Q86 74 94 80 M106 80 Q114 74 120 83', 3],
+    serious: ['M80 78 L95 83 M105 83 L120 78', 3.4],
+  }[m.brows] || ['M80 82 Q87 78 94 81 M106 81 Q113 78 120 82', 3];
+  h += `<path d="${B[0]}" stroke="${bc}" stroke-width="${B[1]}" stroke-linecap="round" fill="none"/>`;
+  // eyes: they blink
+  const ec = (EYE_COLS[m.eyeCol] || EYE_COLS[0])[0];
+  const eye = x => {
+    if (m.eyes === 'round') return `<ellipse cx="${x}" cy="93" rx="5.2" ry="5.6" fill="#fff"/><circle cx="${x + .4}" cy="93.4" r="3.4" fill="${ec}"/><circle cx="${x + .4}" cy="93.4" r="1.7" fill="#1A1410"/><circle cx="${x + 1.6}" cy="92" r="1.1" fill="#fff"/>`;
+    if (m.eyes === 'almond') return `<path d="M${x - 6} 93.5 Q${x} 87 ${x + 6} 93 Q${x} 98 ${x - 6} 93.5 Z" fill="#fff"/><circle cx="${x + .3}" cy="93.2" r="3" fill="${ec}"/><circle cx="${x + .3}" cy="93.2" r="1.5" fill="#1A1410"/><circle cx="${x + 1.3}" cy="92.2" r=".9" fill="#fff"/><path d="M${x - 6.5} 93.5 Q${x} 86.5 ${x + 6.5} 92.6" stroke="#2A211C" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+    if (m.eyes === 'wide') return `<circle cx="${x}" cy="93" r="6.6" fill="#fff"/><circle cx="${x + .5}" cy="93.6" r="4" fill="${ec}"/><circle cx="${x + .5}" cy="93.6" r="2" fill="#1A1410"/><circle cx="${x + 2}" cy="91.8" r="1.4" fill="#fff"/><circle cx="${x - 1.2}" cy="95.4" r=".6" fill="#fff"/>`;
+    if (m.eyes === 'sleepy') return `<ellipse cx="${x}" cy="94" rx="3.8" ry="3.4" fill="#2A211C"/><path d="M${x - 5} 93 Q${x} 88 ${x + 5} 93 Z" fill="${skin}"/><path d="M${x - 5} 93 Q${x} 91.6 ${x + 5} 93" stroke="#2A211C" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+    const dot = `<ellipse cx="${x}" cy="93" rx="3.6" ry="4.2" fill="#2A211C"/><circle cx="${x + 1.3}" cy="91.5" r="1.3" fill="#fff"/>`;
+    if (m.eyes === 'lash') return dot + `<path d="M${x - 3.6} 90 L${x - 6} 87.6 M${x + 3.6} 90 L${x + 6} 87.6 M${x} 88.6 L${x} 86" stroke="#2A211C" stroke-width="1.3" stroke-linecap="round" transform="rotate(${x < 100 ? -12 : 12} ${x} 93)"/>`;
+    return dot;
+  };
+  h += `<g class="ce">${eye(87.5)}${eye(112.5)}</g>`;
+  // nose
+  h += {
+    button: `<ellipse cx="100" cy="104" rx="4" ry="3" fill="${skinD}" opacity=".55"/><circle cx="98.6" cy="103" r="1.1" fill="#fff" opacity=".35"/>`,
+    long: `<path d="M100 92 Q98 103 95.5 107 Q100 110.5 104.5 107" stroke="${skinD}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    broad: `<path d="M94 104 Q93 109 97 109 Q100 111 103 109 Q107 109 106 104" stroke="${skinD}" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="97.5" cy="107.6" r="1.1" fill="${skinD}"/><circle cx="102.5" cy="107.6" r="1.1" fill="${skinD}"/>`,
+  }[m.nose] || `<path d="M100 96 Q96.5 106 101 107.5" stroke="${skinD}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  // mouth, plus an open smile he switches to when he waves
+  const lip = '#8A4A3C';
+  const mouth = {
+    grin: `<path d="M89 112 Q100 125 111 112 Q100 115 89 112 Z" fill="#6E2A26"/><path d="M90.5 112.8 Q100 115.4 109.5 112.8 L108.6 115 Q100 117 91.4 115 Z" fill="#fff"/>`,
+    smirk: `<path d="M92 116 Q103 119 111 111" stroke="${lip}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
+    small: `<path d="M95 115 Q100 119 105 115" stroke="${lip}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
+    flat: `<path d="M92 116 Q100 117 108 116" stroke="${lip}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
+  }[m.mouth] || `<path d="M90 114 Q100 122 110 114" stroke="${lip}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+  h += `<g class="mn">${mouth}</g><g class="mo"><path d="M88 112 Q100 129 112 112 Q100 115.5 88 112 Z" fill="#6E2A26"/><path d="M93 121 Q100 117 107 121 Q100 125 93 121 Z" fill="#E07A7A"/><path d="M90 112.6 Q100 115.6 110 112.6 L109 114.6 Q100 117 91 114.6 Z" fill="#fff"/></g>`;
   // facial hair
-  if (m.beard === 'stubble') s += `<path d="M70 100 C72 128 86 132 100 132 C114 132 128 128 130 100 C126 116 116 122 100 122 C84 122 74 116 70 100 Z" fill="${hc}" opacity=".22"/>`;
-  if (m.beard === 'tash' || m.beard === 'beard') s += `<path d="M88 112 Q100 106 112 112 Q106 114 100 112 Q94 114 88 112 Z" fill="${hc}"/>`;
-  if (m.beard === 'beard') s += `<path d="M69 98 C70 128 84 134 100 134 C116 134 130 128 131 98 C127 112 120 118 113 117 Q100 128 87 117 C80 118 73 112 69 98 Z" fill="${hc}"/><path d="M92 117 Q100 121 108 117" stroke="#8A4A3C" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+  if (m.beard === 'stubble') h += `<path d="M70 100 C72 128 86 132 100 132 C114 132 128 128 130 100 C126 116 116 122 100 122 C84 122 74 116 70 100 Z" fill="${hc}" opacity=".22"/>`;
+  if (m.beard === 'tash' || m.beard === 'beard') h += `<path d="M88 111 Q100 105 112 111 Q106 113 100 111 Q94 113 88 111 Z" fill="${hc}"/>`;
+  if (m.beard === 'beard') h += `<path d="M69 98 C70 128 84 134 100 134 C116 134 130 128 131 98 C127 112 120 118 113 117 Q100 128 87 117 C80 118 73 112 69 98 Z" fill="${hc}"/>`;
   // hair on top
   const H = {
     short: `<path d="M67 90 C64 58 84 46 103 47 C124 48 138 62 133 90 C130 76 122 68 108 66 C96 70 80 70 67 90 Z"/>`,
     side: `<path d="M67 92 C62 56 86 44 106 47 C128 50 140 66 133 92 C131 74 124 66 114 62 C104 72 84 72 67 92 Z"/><path d="M114 62 C110 56 100 52 90 54" stroke="${hcD}" stroke-width="1.6" fill="none"/>`,
+    slick: `<path d="M67 92 C62 58 82 44 102 45 C124 46 140 60 133 92 C131 80 128 72 122 66 C112 60 90 60 78 68 C72 74 69 82 67 92 Z"/><path d="M80 64 Q96 52 120 58 M86 69 Q100 58 125 64 M76 74 Q86 64 98 62" stroke="${hcD}" stroke-width="1.4" fill="none" opacity=".7"/>`,
     buzz: `<path d="M68 88 C66 60 84 52 100 52 C118 52 134 60 132 88 C126 70 114 64 100 64 C86 64 74 70 68 88 Z" opacity=".75"/>`,
     curly: `<g>${[[72, 76, 9], [80, 64, 10], [92, 56, 11], [106, 55, 11], [119, 62, 10], [128, 74, 9], [70, 88, 7], [130, 88, 7], [100, 64, 10]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>`,
+    messy: `<path d="M66 92 C60 66 68 54 78 50 L74 40 L88 46 L92 34 L102 45 L112 34 L115 47 L128 41 L125 54 C136 60 140 74 134 92 C131 80 125 72 116 69 L109 76 L103 67 L94 76 L87 69 C77 73 70 82 66 92 Z"/>`,
     quiff: `<path d="M67 92 C62 62 78 50 92 46 C100 34 120 34 128 44 C122 44 118 46 116 50 C130 56 138 70 133 92 C130 78 122 70 110 68 C94 72 80 72 67 92 Z"/>`,
     long: `<path d="M65 108 C58 60 82 46 102 47 C124 48 144 62 135 108 C132 86 126 72 112 66 C100 74 82 76 72 84 C68 92 67 100 65 108 Z"/>`,
     bun: `<path d="M68 90 C64 60 84 50 102 50 C122 50 138 62 132 90 C128 74 118 66 100 66 C84 66 72 74 68 90 Z"/>`,
     bald: '',
   }[m.hair] || '';
-  s += `<g fill="${hc}">${H}</g>`;
-  if (H && m.hair !== 'buzz') s += `<path d="M82 58 Q96 50 112 54" stroke="#fff" stroke-opacity=".22" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  h += `<g fill="${hc}">${H}</g>`;
+  if (H && m.hair !== 'buzz') h += `<path d="M82 58 Q96 50 112 54" stroke="#fff" stroke-opacity="${m.hair === 'slick' ? .38 : .22}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
   // glasses
-  if (m.glasses === 'round') s += `<g fill="#fff" fill-opacity=".14" stroke="#2A2A2A" stroke-width="2.2"><circle cx="87.5" cy="93" r="9.5"/><circle cx="112.5" cy="93" r="9.5"/></g><path d="M97 93 Q100 90 103 93 M78 92 L69 90 M122 92 L131 90" stroke="#2A2A2A" stroke-width="2" fill="none"/>`;
-  if (m.glasses === 'square') s += `<g fill="#fff" fill-opacity=".14" stroke="#1C2C4C" stroke-width="2.4"><rect x="77" y="85" width="21" height="15" rx="3.5"/><rect x="102" y="85" width="21" height="15" rx="3.5"/></g><path d="M98 91 H102 M77 90 L69 89 M123 90 L131 89" stroke="#1C2C4C" stroke-width="2.2"/>`;
+  if (m.glasses === 'round') h += `<g fill="#fff" fill-opacity=".14" stroke="#2A2A2A" stroke-width="2.2"><circle cx="87.5" cy="93" r="9.5"/><circle cx="112.5" cy="93" r="9.5"/></g><path d="M97 93 Q100 90 103 93 M78 92 L69 90 M122 92 L131 90" stroke="#2A2A2A" stroke-width="2" fill="none"/>`;
+  if (m.glasses === 'square') h += `<g fill="#fff" fill-opacity=".14" stroke="#1C2C4C" stroke-width="2.4"><rect x="77" y="85" width="21" height="15" rx="3.5"/><rect x="102" y="85" width="21" height="15" rx="3.5"/></g><path d="M98 91 H102 M77 90 L69 89 M123 90 L131 89" stroke="#1C2C4C" stroke-width="2.2"/>`;
+  if (m.glasses === 'big') h += `<g fill="#fff" fill-opacity=".16" stroke="#141414" stroke-width="3.6"><rect x="74" y="82" width="24" height="20" rx="6"/><rect x="102" y="82" width="24" height="20" rx="6"/></g><path d="M98 89 H102 M74 88 L68 87 M126 88 L132 87" stroke="#141414" stroke-width="3"/><path d="M78 86 L84 86" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/>`;
+  s += `<g class="ch">${h}</g>`;
   // what he holds
   const hold = m.hold && EXTRAS.find(x => x.id === m.hold && unlockedBy(x)) ? m.hold : '';
-  if (!opt.preview) s += holdSVG(hold, id);
+  if (!opt.preview && !opt.head) s += holdSVG(hold, id, skin, skinD, sleeve, cuff);
+  s += '</g>';
   function collar(c) { return `<path d="M100 170 L86 154 L80 166 L93 182 Z" fill="${c}" stroke="${shade(c, -.16)}" stroke-width="1"/><path d="M100 170 L114 154 L120 166 L107 182 Z" fill="${c}" stroke="${shade(c, -.16)}" stroke-width="1"/>`; }
-  function tieSVG(c, shine) { return `<path d="M95 168 H105 L103.5 179 H96.5 Z" fill="${shade(c, -.12)}"/><path d="M96.5 179 H103.5 L108 226 L100 236 L92 226 Z" fill="${c}"/>${shine ? `<path d="M97 182 L99 226" stroke="#FFF3C4" stroke-opacity=".6" stroke-width="1.6"/>` : `<path d="M98 184 L102 222" stroke="#fff" stroke-opacity=".14" stroke-width="2"/>`}`; }
-  if (opt.head) return `<svg class="char-head" viewBox="56 40 88 88" aria-hidden="true">${s}</svg>`;
+  function tieSVG(c, shine, pat) { const blade = 'M96.5 179 H103.5 L108 226 L100 236 L92 226 Z'; return `<path d="M95 168 H105 L103.5 179 H96.5 Z" fill="${shade(c, -.12)}"/><path d="${blade}" fill="${c}"/>${pat ? `<path d="${blade}" fill="url(#${id}dot)"/>` : ''}${shine ? `<path d="M97 182 L99 226" stroke="#FFF3C4" stroke-opacity=".6" stroke-width="1.6"/>` : `<path d="M98 184 L102 222" stroke="#fff" stroke-opacity=".14" stroke-width="2"/>`}`; }
+  const delay = `style="--bd:-${(CHAR_N * 1.7 % 5).toFixed(1)}s"`;
+  if (opt.head) return `<svg class="char-head live" ${delay} viewBox="56 40 88 88" aria-hidden="true">${s}</svg>`;
   if (opt.preview) return `<svg class="char-prev" viewBox="20 36 160 210" aria-hidden="true">${s}</svg>`;
-  if (!opt.orb) return `<svg class="char-art" viewBox="0 0 200 262" role="img" aria-label="Your character">${s}</svg>`;
-  return `<svg class="char-art orb" viewBox="-20 -16 240 240" role="img" aria-label="Your character, wearing the ${esc((OUTFITS.find(x => x.id === o) || OUTFITS[0]).name.toLowerCase())}"><defs>
+  const what = L ? `dressed as ${L.name}` : `wearing the ${(OUTFITS.find(x => x.id === o) || OUTFITS[0]).name.toLowerCase().replace(/^the /, '')}`;
+  if (!opt.orb) return `<svg class="char-art live" ${delay} viewBox="0 0 200 262" role="img" aria-label="Your character, ${esc(what)}">${s}</svg>`;
+  return `<svg class="char-art orb live" ${delay} viewBox="-20 -16 240 240" role="img" aria-label="Your character, ${esc(what)}"><defs>
     <radialGradient id="${id}ob" cx=".5" cy=".3" r=".75"><stop offset="0" stop-color="#F2FBFF"/><stop offset=".7" stop-color="#BFE6FA"/><stop offset="1" stop-color="#7CC6F0"/></radialGradient>
     <linearGradient id="${id}og" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <clipPath id="${id}oc"><circle cx="100" cy="104" r="112"/></clipPath></defs>
@@ -1127,34 +1224,73 @@ function charSVG(opt = {}) {
     <ellipse cx="72" cy="30" rx="58" ry="26" transform="rotate(-24 72 30)" fill="url(#${id}og)" opacity=".75"/>
     <circle cx="176" cy="150" r="6" fill="#fff" opacity=".6"/></svg>`;
 }
-function holdSVG(h, id) {
-  if (h === 'mug') return `<g transform="translate(150 200)"><path d="M0 0 H26 V30 Q26 38 18 38 H8 Q0 38 0 30 Z" fill="#fff" stroke="#C7D7E3"/><path d="M26 8 Q36 8 36 17 Q36 26 26 26" stroke="#C7D7E3" stroke-width="4" fill="none"/><rect x="0" y="10" width="26" height="9" fill="#1A96E4"/><path d="M8 -6 Q4 -12 8 -18 M16 -6 Q12 -12 16 -18" stroke="#fff" stroke-opacity=".8" stroke-width="2" fill="none" stroke-linecap="round"/></g>`;
-  if (h === 'calc') return `<g transform="translate(146 194) rotate(8)"><rect width="34" height="46" rx="5" fill="#2E3A48"/><rect x="5" y="5" width="24" height="10" rx="2" fill="#B9E5A0"/>${[0, 1, 2].map(r => [0, 1, 2].map(c => `<rect x="${5 + c * 8.5}" y="${19 + r * 8.5}" width="6" height="6" rx="1.5" fill="${r === 2 && c === 2 ? '#F28C28' : '#E2E8EE'}"/>`).join('')).join('')}</g>`;
-  if (h === 'laptop') return `<g transform="translate(118 206)"><path d="M6 0 H70 Q74 0 74 4 V40 H2 V4 Q2 0 6 0 Z" fill="#C9D3DC"/><rect x="7" y="5" width="62" height="31" rx="2" fill="#2E8FD8"/><path d="M7 5 H69 L40 36 H7 Z" fill="#fff" opacity=".18"/><path d="M-6 40 H82 L76 48 H0 Z" fill="#AEBAC5"/><text x="38" y="25" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="sans-serif">A=L+E</text></g>`;
-  if (h === 'case') return `<g transform="translate(140 206)"><path d="M14 0 H34 Q38 0 38 4 V8 H33 V5 H15 V8 H10 V4 Q10 0 14 0 Z" fill="#5A3A22"/><rect x="0" y="8" width="48" height="36" rx="5" fill="#7A4E2C"/><rect x="0" y="8" width="48" height="12" rx="5" fill="#8C5C35"/><rect x="21" y="18" width="6" height="7" rx="1.5" fill="#E2B33E"/></g>`;
-  if (h === 'trophy') return `<g transform="translate(146 186)"><path d="M6 0 H34 V14 Q34 30 20 32 Q6 30 6 14 Z" fill="url(#${id}gold)"/><path d="M6 4 Q-4 4 -2 12 Q0 20 8 20 M34 4 Q44 4 42 12 Q40 20 32 20" stroke="#D4A537" stroke-width="3" fill="none"/><rect x="16" y="32" width="8" height="8" fill="#C99A2E"/><rect x="8" y="40" width="24" height="8" rx="2" fill="#5A3A22"/><path d="M12 4 Q14 16 18 22" stroke="#fff" stroke-opacity=".6" stroke-width="2" fill="none"/></g>`;
-  return '';
+// The held item, in his right hand: the forearm comes up from below, the item sits in a fist at the grip point.
+function holdSVG(h, id, skin, skinD, sleeve, cuff) {
+  if (!h) return '';
+  if (h === 'laptop') return `<g class="chold"><g transform="translate(118 196)"><path d="M6 0 H70 Q74 0 74 4 V40 H2 V4 Q2 0 6 0 Z" fill="#C9D3DC"/><rect x="7" y="5" width="62" height="31" rx="2" fill="#2E8FD8"/><path d="M7 5 H69 L40 36 H7 Z" fill="#fff" opacity=".18"/><path d="M-6 40 H82 L76 48 H0 Z" fill="#AEBAC5"/><text x="38" y="25" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="sans-serif">A=L+E</text></g></g>`;
+  const item = {
+    mug: `<path d="M-13 -30 H13 V2 Q13 9 6 9 H-6 Q-13 9 -13 2 Z" fill="#fff" stroke="#C7D7E3"/><path d="M13 -22 Q23 -22 23 -13 Q23 -4 13 -4" stroke="#C7D7E3" stroke-width="4" fill="none"/><rect x="-13" y="-21" width="26" height="9" fill="#1A96E4"/><path d="M-5 -36 Q-9 -42 -5 -48 M4 -36 Q0 -42 4 -48" stroke="#fff" stroke-opacity=".85" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+    calc: `<g transform="rotate(6)"><rect x="-16" y="-42" width="32" height="48" rx="5" fill="#2E3A48"/><rect x="-11" y="-37" width="22" height="10" rx="2" fill="#B9E5A0"/>${[0, 1, 2].map(r => [0, 1, 2].map(c => `<rect x="${-11 + c * 8}" y="${-23 + r * 8}" width="6" height="6" rx="1.5" fill="${r === 2 && c === 2 ? '#F28C28' : '#E2E8EE'}"/>`).join('')).join('')}</g>`,
+    case: `<path d="M-6 -6 H6 Q9 -6 9 -3 V2 H5 V-2 H-5 V2 H-9 V-3 Q-9 -6 -6 -6 Z" fill="#5A3A22"/><rect x="-24" y="2" width="48" height="34" rx="5" fill="#7A4E2C"/><rect x="-24" y="2" width="48" height="11" rx="5" fill="#8C5C35"/><rect x="-3" y="11" width="6" height="7" rx="1.5" fill="#E2B33E"/>`,
+    trophy: `<path d="M-14 -46 H14 V-32 Q14 -16 0 -14 Q-14 -16 -14 -32 Z" fill="url(#${id}gold)"/><path d="M-14 -42 Q-24 -42 -22 -34 Q-20 -26 -12 -26 M14 -42 Q24 -42 22 -34 Q20 -26 12 -26" stroke="#D4A537" stroke-width="3" fill="none"/><rect x="-4" y="-14" width="8" height="8" fill="#C99A2E"/><rect x="-12" y="-7" width="24" height="9" rx="2" fill="#5A3A22"/><path d="M-8 -42 Q-6 -30 -2 -24" stroke="#fff" stroke-opacity=".6" stroke-width="2" fill="none"/>`,
+    sticks: `<g stroke-linecap="round"><path d="M-3 10 L-18 -46" stroke="#D9B27A" stroke-width="4.4"/><path d="M3 10 L10 -48" stroke="#CFA56C" stroke-width="4.4"/><path d="M-17 -42 L-18.4 -47.5 M9.5 -44 L10.2 -49" stroke="#F3E2C4" stroke-width="5.4"/></g>`,
+    card: `<g transform="rotate(-8)"><rect x="-24" y="-36" width="48" height="27" rx="1.5" fill="#F1EADA" stroke="#D9CFB8"/><text x="0" y="-24" text-anchor="middle" font-size="5.6" font-weight="700" letter-spacing=".6" fill="#3C3A35" font-family="Georgia,serif">PATRICK BATEMAN</text><text x="0" y="-17.5" text-anchor="middle" font-size="3.6" letter-spacing=".4" fill="#5A574F" font-family="Georgia,serif">VICE PRESIDENT</text></g>`,
+    sellpen: `<g transform="rotate(18)"><rect x="-3.2" y="-50" width="6.4" height="52" rx="3" fill="#141414"/><rect x="-3.2" y="-50" width="6.4" height="8" rx="3" fill="url(#${id}gold)"/><path d="M3.2 -44 V-28" stroke="url(#${id}gold)" stroke-width="1.8"/><path d="M-3.2 2 L0 9 L3.2 2 Z" fill="url(#${id}gold)"/><path d="M-1.4 -40 V-6" stroke="#fff" stroke-opacity=".3" stroke-width="1.2"/></g>`,
+    phone: `<g transform="rotate(-6)"><path d="M3 -52 V-68" stroke="#2A2A2A" stroke-width="3" stroke-linecap="round"/><rect x="-10" y="-54" width="20" height="58" rx="3.5" fill="#3A3D42"/><rect x="-7" y="-49" width="14" height="9" rx="1.5" fill="#A9D18E"/>${[0, 1, 2, 3].map(r => [0, 1, 2].map(c => `<rect x="${-7 + c * 5}" y="${-36 + r * 5}" width="3.6" height="3" rx=".8" fill="#C9CED6"/>`).join('')).join('')}</g>`,
+    cola: `<rect x="-11" y="-40" width="22" height="42" rx="3.5" fill="#B3122B"/><ellipse cx="0" cy="-40" rx="11" ry="3" fill="#C9CED6"/><path d="M-11 -18 Q0 -26 11 -20 V-14 Q0 -20 -11 -12 Z" fill="#fff"/><text x="0" y="-27" text-anchor="middle" font-size="6.2" font-weight="800" fill="#fff" font-family="sans-serif">CHERRY</text><path d="M-7 -36 V-2" stroke="#fff" stroke-opacity=".25" stroke-width="2"/>`,
+  }[h];
+  if (!item) return '';
+  const g = h === 'case' ? [150, 178] : [154, 196];
+  const fist = `<rect x="-10" y="-7" width="20" height="17" rx="7.5" fill="${skin}"/><path d="M-9 -1.4 H8 M-9 3.6 H8" stroke="${skinD}" stroke-width="1.1" opacity=".7"/><ellipse cx="-8.5" cy="-5" rx="5.2" ry="3.8" transform="rotate(-28 -8.5 -5)" fill="${skin}"/>`;
+  const arm = `<path d="M4 96 L0 10" stroke="${sleeve}" stroke-width="19" stroke-linecap="round"/><path d="M4 96 L0 10" stroke="url(#${id}arm)" stroke-width="19"/>${cuff ? `<path d="M.9 20 L0 11" stroke="${cuff}" stroke-width="19"/>` : ''}`;
+  return `<g class="chold"><g transform="translate(${g[0]} ${g[1]})">${arm}${item}${fist}</g></g>`;
+}
+// He waves: the arm swings up, he smiles, and says something.
+function charWave(el, line) {
+  const svg = el.querySelector('svg.char-art'); if (!svg) return;
+  svg.classList.remove('wave'); void svg.getBoundingClientRect(); svg.classList.add('wave');
+  clearTimeout(svg._w); svg._w = setTimeout(() => svg.classList.remove('wave'), 2000);
+  const say = el.querySelector('.me-say');
+  if (say) {
+    const L = legendOf(ME().outfit);
+    say.textContent = line || (L && Math.random() < .7 ? `“${L.quote}”` : QUIPS[Math.floor(Math.random() * QUIPS.length)]);
+    say.hidden = false; say.classList.remove('pop'); void say.offsetWidth; say.classList.add('pop');
+    clearTimeout(say._t); say._t = setTimeout(() => { say.hidden = true; }, 3200);
+  }
 }
 function wardrobe(tab = 'outfits') {
   const sh = sheet(`<div class="label">Your character</div><h3>Wardrobe</h3><div class="wd-prev" id="wdp"></div><div class="seg wd-tabs" id="wdt"></div><div id="wd"></div>`);
-  const draw = () => {
+  const draw = wave => {
     const m = ME(), lvl = levelOf(S.xp);
     $('#wdp', sh).innerHTML = charSVG({ orb: true });
-    $('#wdt', sh).innerHTML = [['outfits', 'Outfits'], ['extras', 'Extras'], ['looks', 'Looks']].map(([k, l]) => `<button class="tog" aria-pressed="${tab === k}" data-wt="${k}">${l}</button>`).join('');
+    if (wave) charWave($('#wdp', sh));
+    $('#wdt', sh).innerHTML = [['outfits', 'Outfits'], ['legends', 'Legends'], ['extras', 'Extras'], ['face', 'Face'], ['looks', 'Hair']].map(([k, l]) => `<button class="tog" aria-pressed="${tab === k}" data-wt="${k}">${l}</button>`).join('');
+    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="sw ${cur === i ? 'on' : ''}" style="--c:${Array.isArray(c) ? c[0] : c}" data-wl="${key}" data-v="${i}" aria-label="${Array.isArray(c) ? c[1] : 'Colour ' + (i + 1)}"></button>`).join('')}</div>`;
+    const seg = (list, key, cur) => `<div class="seg">${list.map(([v, l]) => `<button class="tog" aria-pressed="${cur === v}" data-wl="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
     let h = '';
     if (tab === 'outfits') h = `<div class="wd-grid">${OUTFITS.map(x => { const ok = unlockedBy(x); return `<button class="wd-item ${m.outfit === x.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-wo="${x.id}" ${ok ? '' : 'aria-disabled="true"'}>${charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } })}<b>${esc(x.name)}</b><small>${ok ? (m.outfit === x.id ? 'Wearing' : esc(x.desc)) : `${ICON.lock}Level ${x.lvl} · ${esc(titleAt(x.lvl))}`}</small></button>`; }).join('')}</div>`;
+    else if (tab === 'legends') h = `<p class="hint wd-note">Famous faces of finance, real and on screen. Each comes with his hair, his look and his signature thing to hold. Your skin and face stay yours.</p><div class="wd-grid">${LEGENDS.map(x => { const ok = unlockedBy(x); return `<button class="wd-item legend ${m.outfit === x.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-wo="${x.id}" ${ok ? '' : 'aria-disabled="true"'}>${charSVG({ preview: true, me: { outfit: x.id, on: {}, hold: '' } })}<b>${esc(x.name)}</b><span class="wd-from">${esc(x.from)}</span><small>${ok ? (m.outfit === x.id ? 'Wearing' : esc(x.desc)) : `${ICON.lock}${esc(needText(x))}`}</small></button>`; }).join('')}</div>`;
     else if (tab === 'extras') {
-      const row = x => { const ok = unlockedBy(x), on = x.kind === 'on' ? !!m.on[x.id] : m.hold === x.id; return `<button class="task ${ok ? '' : 'locked'}" data-wx="${x.id}" ${ok ? '' : 'disabled'} aria-pressed="${ok && on}"><span class="check">${ok ? ICON.check : ICON.lock}</span><span class="row-main"><span class="row-title">${esc(x.name)}</span><small>${ok ? (x.jacket && !JACKETS[m.outfit] ? 'Shows on a jacket' : on ? 'On' : 'Tap to add') : needText(x)}</small></span></button>`; };
+      const row = x => { const ok = unlockedBy(x), on = x.kind === 'on' ? !!m.on[x.id] : m.hold === x.id; return `<button class="task ${ok ? '' : 'locked'}" data-wx="${x.id}" ${ok ? '' : 'disabled'} aria-pressed="${ok && on}"><span class="check">${ok ? ICON.check : ICON.lock}</span><span class="row-main"><span class="row-title">${esc(x.name)}</span><small>${ok ? (x.jacket && !JACKETS[m.outfit] ? 'Shows on a jacket' : on ? 'On' : 'Tap to add') : esc(needText(x))}</small></span></button>`; };
       h = `<div class="label sheet-sub">He wears</div><div class="tasks">${EXTRAS.filter(x => x.kind === 'on').map(row).join('')}</div><div class="label sheet-sub">He holds one thing</div><div class="tasks">${EXTRAS.filter(x => x.kind === 'hold').map(row).join('')}</div>`;
+    } else if (tab === 'face') {
+      h = `<div class="wd-looks"><div class="label">Skin</div>${sw(SKINS, 'skin', m.skin)}<div class="label">Face shape</div>${seg(FACES, 'face', m.face)}<div class="label">Eyes</div>${seg(EYES, 'eyes', m.eyes)}<div class="label">Eye colour</div>${sw(EYE_COLS, 'eyeCol', m.eyeCol)}<p class="hint">Eye colour shows with round, almond and wide eyes.</p>
+        <div class="label">Eyebrows</div>${seg(BROWS, 'brows', m.brows)}<div class="label">Nose</div>${seg(NOSES, 'nose', m.nose)}<div class="label">Mouth</div>${seg(MOUTHS, 'mouth', m.mouth)}<div class="label">Freckles and marks</div>${seg(MARKS, 'marks', m.marks)}</div>`;
     } else {
-      const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="sw ${cur === i ? 'on' : ''}" style="--c:${Array.isArray(c) ? c[0] : c}" data-wl="${key}" data-v="${i}" aria-label="${Array.isArray(c) ? c[1] : 'Colour ' + (i + 1)}"></button>`).join('')}</div>`;
-      const seg = (list, key, cur) => `<div class="seg">${list.map(([v, l]) => `<button class="tog" aria-pressed="${cur === v}" data-wl="${key}" data-v="${v}">${l}</button>`).join('')}</div>`;
-      h = `<div class="wd-looks"><div class="label">Skin</div>${sw(SKINS, 'skin', m.skin)}<div class="label">Hair</div>${seg(HAIRS, 'hair', m.hair)}<div class="label">Hair colour</div>${sw(HAIR_COLS, 'hairCol', m.hairCol)}
-        <div class="label">Facial hair</div>${seg(BEARDS, 'beard', m.beard)}<div class="label">Glasses</div>${seg(GLASSES, 'glasses', m.glasses)}<div class="label">Tie colour</div>${sw(TIES, 'tie', m.tie)}<p class="hint">The boss suit always comes with its gold tie.</p></div>`;
+      h = `<div class="wd-looks"><div class="label">Hair</div>${seg(HAIRS, 'hair', m.hair)}<div class="label">Hair colour</div>${sw(HAIR_COLS, 'hairCol', m.hairCol)}
+        <div class="label">Facial hair</div>${seg(BEARDS, 'beard', m.beard)}<div class="label">Glasses</div>${seg(GLASSES, 'glasses', m.glasses)}<div class="label">Tie colour</div>${sw(TIES, 'tie', m.tie)}<p class="hint">The boss suit and the legends come with their own ties, and legends use their own hair and glasses.</p></div>`;
     }
     $('#wd', sh).innerHTML = h;
     sh.querySelectorAll('[data-wt]').forEach(b => b.onclick = () => { tab = b.dataset.wt; draw(); });
-    sh.querySelectorAll('[data-wo]').forEach(b => b.onclick = () => { const x = OUTFITS.find(o => o.id === b.dataset.wo); if (!unlockedBy(x)) return toast(`Unlocks at level ${x.lvl}. You are level ${lvl}.`); S.me.outfit = x.id; save(); sfx.tap(); draw(); });
+    sh.querySelectorAll('[data-wo]').forEach(b => b.onclick = () => {
+      const x = WEAR.find(o => o.id === b.dataset.wo);
+      if (!unlockedBy(x)) return toast(x.ach ? `Earn “${achName(x.ach)}” to unlock ${x.name}.` : `Unlocks at level ${x.lvl}. You are level ${lvl}.`);
+      const was = legendOf(S.me.outfit);
+      S.me.outfit = x.id;
+      if (x.hold && (!S.me.hold || (was && S.me.hold === was.hold))) S.me.hold = x.hold; // a legend picks up his signature thing
+      else if (!x.hold && was && S.me.hold === was.hold) S.me.hold = '';
+      save(); sfx.tap(); draw(true);
+    });
     sh.querySelectorAll('[data-wx]').forEach(b => b.onclick = () => { const x = EXTRAS.find(o => o.id === b.dataset.wx); if (x.kind === 'on') S.me.on = Object.assign({}, S.me.on, { [x.id]: !S.me.on[x.id] }); else S.me.hold = S.me.hold === x.id ? '' : x.id; save(); sfx.tap(); draw(); });
     sh.querySelectorAll('[data-wl]').forEach(b => b.onclick = () => { const k = b.dataset.wl, v = b.dataset.v; S.me[k] = /^\d+$/.test(v) ? +v : v; save(); sfx.tap(); draw(); });
   };
@@ -1165,14 +1301,15 @@ function wardrobe(tab = 'outfits') {
 const titleAt = lvl => titleOf(lvl)[1];
 function nextUnlock() {
   const lvl = levelOf(S.xp);
-  return [...OUTFITS, ...EXTRAS].filter(x => !x.ach && x.lvl > lvl).sort((a, b) => a.lvl - b.lvl)[0];
+  return [...OUTFITS, ...EXTRAS].filter(x => x.lvl && x.lvl > lvl).sort((a, b) => a.lvl - b.lvl)[0];
 }
 function charCard() {
-  const n = nextUnlock(), m = ME(), lvl = levelOf(S.xp), wearing = OUTFITS.find(x => x.id === m.outfit) || OUTFITS[0];
-  const got = [...OUTFITS, ...EXTRAS].filter(unlockedBy).length, all = OUTFITS.length + EXTRAS.length;
+  const n = nextUnlock(), m = ME(), lvl = levelOf(S.xp), L = legendOf(m.outfit), wearing = OUTFITS.find(x => x.id === m.outfit) || OUTFITS[0];
+  const got = [...WEAR, ...EXTRAS].filter(unlockedBy).length, all = WEAR.length + EXTRAS.length;
+  const legends = LEGENDS.filter(unlockedBy).length;
   const a = levelStart(lvl), b = n ? levelStart(n.lvl) : 1;
   return `<section class="card stack"><div class="list-head"><h3>Wardrobe</h3><span class="pill p-lime">${got} of ${all} unlocked</span></div>
-    <div class="inner"><span class="wd-mini">${charSVG({ preview: true })}</span><span class="cap">Wearing the <b>${esc(wearing.name.toLowerCase().replace(/^the /, ''))}</b>.<br>${n ? `Next: <b>${esc(n.name.toLowerCase())}</b> at level ${n.lvl}, ${(levelStart(n.lvl) - S.xp).toLocaleString('en')} XP away.` : 'Everything is unlocked. Big boss.'}</span></div>
+    <div class="inner"><span class="wd-mini">${charSVG({ preview: true })}</span><span class="cap">${L ? `Dressed as <b>${esc(L.name)}</b>.` : `Wearing the <b>${esc(wearing.name.toLowerCase().replace(/^the /, ''))}</b>.`}<br>${n ? `Next: <b>${esc(n.name.toLowerCase())}</b> at level ${n.lvl}, ${(levelStart(n.lvl) - S.xp).toLocaleString('en')} XP away.` : 'Every outfit is unlocked. Big boss.'}<br>Legends: <b>${legends} of ${LEGENDS.length}</b>, unlocked by achievements.</span></div>
     ${n ? `<div class="track"><i style="width:${Math.max(2, Math.min(100, 100 * (S.xp - a) / Math.max(1, b - a)))}%"></i></div>` : ''}
     <button class="btn wide" data-wardrobe>Open the wardrobe${ICON.chevR}</button></section>`;
 }
